@@ -1137,7 +1137,7 @@
   // ── Init ──────────────────────────────────────────────────
   async function init() {
     try {
-      const res = await fetch('/data/recipes.json');
+      const res = await fetch('data/recipes.json');
       const data = await res.json();
       state.recipes = data.recipes;
 
