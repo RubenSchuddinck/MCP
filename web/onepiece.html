@@ -107,6 +107,31 @@
 
     @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
+    /* ── VOYAGE STATS ── */
+    .voyage { max-width: 940px; margin: 24px auto 0; padding: 0 18px; }
+    .stats-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 16px 18px; backdrop-filter: blur(10px) saturate(1.1);
+      -webkit-backdrop-filter: blur(10px) saturate(1.1); border-top: 4px solid var(--gold);
+    }
+    .stat-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+    .stat { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-radius: 12px; background: linear-gradient(135deg, rgba(21,101,192,.07), rgba(240,180,41,.07)); border: 1px solid var(--border); }
+    .stat-ic { font-size: 1.5rem; line-height: 1; }
+    .stat-lab { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); font-weight: 800; }
+    .stat-val { font-size: .98rem; font-weight: 800; color: var(--text); line-height: 1.25; }
+    .stat-val small { font-weight: 600; color: var(--text-2); font-size: .82rem; }
+    .activity { margin-top: 14px; }
+    .activity summary { cursor: pointer; font-weight: 800; font-size: .85rem; color: var(--primary); user-select: none; list-style: none; display: flex; align-items: center; gap: 6px; }
+    .activity summary::-webkit-details-marker { display: none; }
+    .activity summary::before { content: "▸"; transition: transform .2s ease; }
+    .activity[open] summary::before { transform: rotate(90deg); }
+    .activity ul { list-style: none; margin: 10px 0 2px; max-height: 230px; overflow-y: auto; }
+    .activity li { display: flex; gap: 10px; padding: 7px 4px; border-bottom: 1px dashed var(--border); font-size: .84rem; }
+    .activity li:last-child { border-bottom: none; }
+    .act-date { color: var(--text-3); font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 116px; }
+    .act-text { color: var(--text-2); font-weight: 600; }
+    .act-empty { color: var(--text-3); font-size: .84rem; padding: 6px 4px; }
+
     /* ── LAYOUT ── */
     .wrap { max-width: 940px; margin: 0 auto; padding: 26px 18px 80px; }
     .saga {
@@ -214,6 +239,16 @@
     </div>
   </header>
 
+  <section class="voyage">
+    <div class="stats-card">
+      <div class="stat-chips" id="stat-chips"></div>
+      <details class="activity">
+        <summary>📜 Recent activity — saved for your dashboard</summary>
+        <ul id="activity-list"></ul>
+      </details>
+    </div>
+  </section>
+
   <main class="wrap" id="content">
     <div class="loading"><span class="spin">🧭</span><br>Charting your course…</div>
   </main>
@@ -226,9 +261,14 @@
     async function apiGet() { const r = await fetch(BASE + 'api/onepiece'); if (!r.ok) throw new Error('API error'); return r.json(); }
     async function apiPut(id, arc) { const r = await fetch(BASE + 'api/onepiece/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(arc) }); if (!r.ok) throw new Error('Save failed'); return r.json(); }
     async function apiReset() { const r = await fetch(BASE + 'api/onepiece/reset', { method: 'POST' }); if (!r.ok) throw new Error('Reset failed'); return r.json(); }
+    async function apiGetLog() { const r = await fetch(BASE + 'api/onepiece/log'); if (!r.ok) throw new Error('Log error'); return r.json(); }
+
+    // ── Personal facts (used for the voyage stats) ──────────────────────────────────
+    const BIRTH = '1999-03-19';   // born 19 March 1999
+    const START = '2026-04-08';   // started watching One Piece on 8 April 2026
 
     // ── State ─────────────────────────────────────────────────────────────────────
-    const S = { arcs: [], collapsed: new Set() };
+    const S = { arcs: [], log: [], collapsed: new Set() };
 
     // ── Helpers ───────────────────────────────────────────────────────────────────
     const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -239,6 +279,19 @@
     function pct(w, t) { return t ? Math.round((w / t) * 100) : 0; }
     // Stable per-saga accent hue so each saga gets its own colour.
     function hueFor(s) { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; }
+
+    // ── Date helpers ────────────────────────────────────────────────────────────────
+    const DAY = 86400000;
+    function ageFrom(iso) {
+      const b = new Date(iso), n = new Date();
+      let a = n.getFullYear() - b.getFullYear();
+      const m = n.getMonth() - b.getMonth();
+      if (m < 0 || (m === 0 && n.getDate() < b.getDate())) a--;
+      return a;
+    }
+    function daysBetween(a, b) { return Math.max(0, Math.floor((b - a) / DAY)); }
+    function fmtDate(d) { return new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+    function fmtDateTime(d) { return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + ', ' + new Date(d).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }); }
 
     // First episode not yet watched, scanning arcs in canonical order.
     function currentEpisode() {
@@ -297,9 +350,54 @@
       </section>`;
     }
 
+    // Voyage stats: live age, days watching, average pace, projected/actual finish.
+    function chip(ic, lab, val) {
+      return `<div class="stat"><span class="stat-ic">${ic}</span><div><div class="stat-lab">${lab}</div><div class="stat-val">${val}</div></div></div>`;
+    }
+    function renderStats() {
+      const now = new Date(), start = new Date(START);
+      const watched = sumWatched(S.arcs), total = sumTotal(S.arcs);
+      const days = Math.max(1, daysBetween(start, now));
+      const avg = watched / days;            // episodes per day so far
+      const remaining = total - watched;
+      const complete = total > 0 && remaining <= 0;
+
+      let finish;
+      if (complete) {
+        const last = [...S.log].reverse().find((e) => e.ts);
+        const fdate = last ? new Date(last.ts) : now;
+        const fdays = Math.max(1, daysBetween(start, fdate));
+        finish = chip('🏁', 'Finished 🎉', `${fmtDate(fdate)}<br><small>${(total / fdays).toFixed(2)} eps/day over ${fdays} days</small>`);
+      } else if (avg > 0 && watched > 0) {
+        const projDays = Math.ceil(remaining / avg);
+        const proj = new Date(now.getTime() + projDays * DAY);
+        finish = chip('🏁', 'Projected finish', `${fmtDate(proj)}<br><small>~${projDays} days at this pace</small>`);
+      } else {
+        finish = chip('🏁', 'Projected finish', `<small>Log an episode to see an estimate</small>`);
+      }
+
+      document.getElementById('stat-chips').innerHTML =
+        chip('🎂', 'Your age', `${ageFrom(BIRTH)} years <small>· born 19 Mar 1999</small>`) +
+        chip('🧭', 'Watching since', `${fmtDate(start)} <small>· ${days} day${days === 1 ? '' : 's'}</small>`) +
+        chip('⚡', 'Average pace', `${avg.toFixed(2)} eps/day <small>· ${watched}/${total} eps</small>`) +
+        finish;
+
+      // recent activity (most recent first) — the data your dashboard can use
+      const items = [...S.log].reverse().slice(0, 14).map((e) => {
+        let text;
+        if (e.type === 'reset') text = '↺ Reset all progress';
+        else if (e.episodesWatched) text = `📺 Watched eps ${e.episodesWatched[0]}–${e.episodesWatched[1]} · ${esc(e.arcName)}`;
+        else if (e.delta < 0) text = `↩︎ Unmarked ${-e.delta} ep${e.delta === -1 ? '' : 's'} · ${esc(e.arcName)}`;
+        else text = `${esc(e.arcName || '')}`;
+        return `<li><span class="act-date">${fmtDateTime(e.ts)}</span><span class="act-text">${text}</span></li>`;
+      }).join('');
+      document.getElementById('activity-list').innerHTML = items || '<li class="act-empty">No activity logged yet — mark some episodes watched.</li>';
+    }
+
     function render() {
       document.getElementById('content').innerHTML = sagaOrder().map(sagaCard).join('');
       renderOverall();
+      renderStats();
     }
 
     // ── Mutations ─────────────────────────────────────────────────────────────────
@@ -318,6 +416,7 @@
       try {
         const saved = await apiPut(id, { watchedCount: clamped });
         Object.assign(arc, saved);
+        try { S.log = await apiGetLog(); } catch {} // keep activity in sync
         // celebrate newly finishing an arc, or the whole series
         const nowComplete = sumWatched(S.arcs) >= sumTotal(S.arcs);
         if (nowComplete && !wasComplete) { confetti({ count: 320, spread: true }); fanfare(); }
@@ -347,7 +446,7 @@
 
     document.getElementById('reset-btn').addEventListener('click', async () => {
       if (!confirm('Reset all watch progress to zero?')) return;
-      try { S.arcs = await apiReset(); render(); }
+      try { S.arcs = await apiReset(); try { S.log = await apiGetLog(); } catch {} render(); }
       catch { alert('Reset failed.'); }
     });
 
@@ -464,7 +563,10 @@
 
     // ── Boot ──────────────────────────────────────────────────────────────────────
     (async () => {
-      try { S.arcs = await apiGet(); render(); }
+      try {
+        const [arcs, log] = await Promise.all([apiGet(), apiGetLog().catch(() => [])]);
+        S.arcs = arcs; S.log = log; render();
+      }
       catch { document.getElementById('content').innerHTML = '<div class="errbox">🌊 Failed to load tracker data. Check the server and try again.</div>'; }
     })();
   </script>

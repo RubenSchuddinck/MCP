@@ -29,15 +29,26 @@ function readBody(req) {
   });
 }
 
-// onepiece.json is stored as { "arcs": [...] }. Read returns the bare array;
-// write wraps it back up so the on-disk shape stays consistent.
+// onepiece.json holds { "arcs": [...], "log": [...] }. The log is an
+// append-only history of watch events (date + arc + episodes), kept for a
+// future dashboard. readDB returns the whole object; writeDB persists it so
+// the log is never dropped on a write. (Legacy bare-array files still load.)
 async function readDB() {
   const parsed = JSON.parse(await readFile(DB, "utf8"));
-  return Array.isArray(parsed) ? parsed : (parsed.arcs ?? []);
+  if (Array.isArray(parsed)) return { arcs: parsed, log: [] };
+  return { arcs: parsed.arcs ?? [], log: parsed.log ?? [] };
 }
 
-async function writeDB(arcs) {
-  await writeFile(DB, JSON.stringify({ arcs }, null, 2));
+async function writeDB(db) {
+  await writeFile(DB, JSON.stringify({ arcs: db.arcs, log: db.log }, null, 2));
+}
+
+// Build a log entry describing a watchedCount change for a single arc.
+function logEntry(arc, prev, next, totalAfter) {
+  const e = { ts: new Date().toISOString(), arcId: arc.id, arcName: arc.name,
+    prevCount: prev, newCount: next, delta: next - prev, totalWatchedAfter: totalAfter };
+  if (next > prev) e.episodesWatched = [arc.epStart + prev, arc.epStart + next - 1];
+  return e;
 }
 
 // Keep watchedCount a sane integer within [0, epCount].
@@ -66,21 +77,32 @@ createServer(async (req, res) => {
   if (pathname === "/api/onepiece") {
     if (method === "GET") {
       try {
-        const arcs = await readDB();
+        const db = await readDB();
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify(arcs));
+        res.end(JSON.stringify(db.arcs));
       } catch { res.writeHead(500).end("Server error"); }
       return;
     }
   }
 
+  // Watch history (date + arc + episodes) for dashboards.
+  if (pathname === "/api/onepiece/log" && method === "GET") {
+    try {
+      const db = await readDB();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(db.log));
+    } catch { res.writeHead(500).end("Server error"); }
+    return;
+  }
+
   if (pathname === "/api/onepiece/reset" && method === "POST") {
     try {
-      const arcs = await readDB();
-      arcs.forEach((a) => (a.watchedCount = 0));
-      await writeDB(arcs);
+      const db = await readDB();
+      db.arcs.forEach((a) => (a.watchedCount = 0));
+      db.log.push({ ts: new Date().toISOString(), type: "reset" });
+      await writeDB(db);
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(arcs));
+      res.end(JSON.stringify(db.arcs));
     } catch { res.writeHead(500).end("Server error"); }
     return;
   }
@@ -91,13 +113,19 @@ createServer(async (req, res) => {
     if (method === "PUT") {
       try {
         const incoming = await readBody(req);
-        const arcs = await readDB();
-        const idx = arcs.findIndex((a) => a.id === id);
+        const db = await readDB();
+        const idx = db.arcs.findIndex((a) => a.id === id);
         if (idx === -1) { res.writeHead(404).end("Not found"); return; }
+        const prev = Number(db.arcs[idx].watchedCount) || 0;
         // Merge so canonical fields (epStart/epEnd/epCount) can't be lost.
-        const arc = clampWatched({ ...arcs[idx], ...incoming, id });
-        arcs[idx] = arc;
-        await writeDB(arcs);
+        const arc = clampWatched({ ...db.arcs[idx], ...incoming, id });
+        db.arcs[idx] = arc;
+        // Record the change so we know what was watched (or unwatched) when.
+        if (arc.watchedCount !== prev) {
+          const total = db.arcs.reduce((n, a) => n + (Number(a.watchedCount) || 0), 0);
+          db.log.push(logEntry(arc, prev, arc.watchedCount, total));
+        }
+        await writeDB(db);
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify(arc));
       } catch (e) { res.writeHead(400).end(e.message); }
