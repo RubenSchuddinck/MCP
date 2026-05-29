@@ -183,6 +183,38 @@
     .step-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); transform: translateY(-1px); }
     .step-btn:disabled { opacity: .3; cursor: default; }
 
+    /* ── STATS PAGE ── */
+    .stats-page { padding-top: 24px; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .kpi {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 15px 16px;
+      box-shadow: var(--shadow); backdrop-filter: blur(10px) saturate(1.1); -webkit-backdrop-filter: blur(10px) saturate(1.1);
+      border-top: 4px solid hsl(var(--hue,210) 75% 52%);
+    }
+    .kpi-val { font-size: 1.7rem; font-weight: 900; letter-spacing: -.02em; color: var(--text); line-height: 1.1; }
+    .kpi-lab { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); font-weight: 800; margin-top: 4px; }
+    .kpi-sub { font-size: .76rem; color: var(--text-2); font-weight: 600; margin-top: 2px; }
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px 12px;
+      box-shadow: var(--shadow); margin-bottom: 16px; backdrop-filter: blur(10px) saturate(1.1); -webkit-backdrop-filter: blur(10px) saturate(1.1);
+    }
+    .chart-card h3 { font-size: .95rem; font-weight: 800; color: var(--text); margin-bottom: 12px; letter-spacing: -.01em; }
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .chart-host { width: 100%; }
+    .chart-host svg { width: 100%; height: auto; display: block; overflow: visible; }
+    .chart-empty { color: var(--text-3); font-size: .86rem; padding: 24px 4px; text-align: center; font-weight: 600; }
+    .c-grid { stroke: rgba(120,150,190,.25); stroke-width: 1; }
+    .c-axis { fill: var(--text-3); font-size: 10px; font-weight: 700; }
+    .c-line { fill: none; stroke: var(--primary); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+    .c-goal { stroke: var(--gold); stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .c-goal-lab { fill: #b07d00; font-size: 10px; font-weight: 800; }
+    .saga-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+    .saga-bar-name { width: 130px; flex-shrink: 0; font-size: .82rem; font-weight: 700; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .saga-bar-track { flex: 1; height: 16px; background: rgba(120,150,190,.16); border-radius: 8px; overflow: hidden; }
+    .saga-bar-fill { height: 100%; border-radius: 8px; transition: width .6s cubic-bezier(.22,1,.36,1); }
+    .saga-bar-val { width: 64px; text-align: right; font-size: .78rem; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
+    @media (max-width: 640px) { .chart-grid { grid-template-columns: 1fr; } .saga-bar-name { width: 92px; } }
+
     .loading, .errbox { text-align: center; padding: 70px 20px; color: var(--surface-solid); font-weight: 600; font-size: 1.05rem; text-shadow: 0 1px 3px rgba(0,0,0,.25); }
     .loading .spin { display: inline-block; animation: spin 1.6s linear infinite; font-size: 1.6rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -224,6 +256,7 @@
         </div>
       </div>
       <div class="header-right">
+        <button class="btn" id="view-btn" title="View stats &amp; charts">📊 Stats</button>
         <button class="btn gold" id="music-btn" title="Play a sea shanty">🎵 Shanty</button>
         <button class="btn" id="expand-all">⤢ Expand all</button>
         <button class="btn" id="reset-btn">↺ Reset</button>
@@ -252,6 +285,16 @@
   <main class="wrap" id="content">
     <div class="loading"><span class="spin">🧭</span><br>Charting your course…</div>
   </main>
+
+  <section class="wrap stats-page" id="stats-view" hidden>
+    <div class="kpis" id="kpis"></div>
+    <div class="chart-card"><h3>📈 Cumulative episodes watched</h3><div class="chart-host" id="chart-cum"></div></div>
+    <div class="chart-grid">
+      <div class="chart-card"><h3>📊 Episodes per day</h3><div class="chart-host" id="chart-day"></div></div>
+      <div class="chart-card"><h3>📅 By weekday</h3><div class="chart-host" id="chart-dow"></div></div>
+    </div>
+    <div class="chart-card"><h3>🗺️ Progress by saga</h3><div class="chart-host" id="chart-saga"></div></div>
+  </section>
 
   <script>
     // ── API ───────────────────────────────────────────────────────────────────────
@@ -282,13 +325,14 @@
 
     // ── Date helpers ────────────────────────────────────────────────────────────────
     const DAY = 86400000;
-    function ageFrom(iso) {
-      const b = new Date(iso), n = new Date();
+    function ageAt(iso, at) {
+      const b = new Date(iso), n = new Date(at);
       let a = n.getFullYear() - b.getFullYear();
       const m = n.getMonth() - b.getMonth();
       if (m < 0 || (m === 0 && n.getDate() < b.getDate())) a--;
       return a;
     }
+    function ageFrom(iso) { return ageAt(iso, new Date()); }
     function daysBetween(a, b) { return Math.max(0, Math.floor((b - a) / DAY)); }
     function fmtDate(d) { return new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
     function fmtDateTime(d) { return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + ', ' + new Date(d).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }); }
@@ -367,11 +411,11 @@
         const last = [...S.log].reverse().find((e) => e.ts);
         const fdate = last ? new Date(last.ts) : now;
         const fdays = Math.max(1, daysBetween(start, fdate));
-        finish = chip('🏁', 'Finished 🎉', `${fmtDate(fdate)}<br><small>${(total / fdays).toFixed(2)} eps/day over ${fdays} days</small>`);
+        finish = chip('🏁', 'Finished 🎉', `${fmtDate(fdate)}<br><small>${(total / fdays).toFixed(2)} eps/day · you were ${ageAt(BIRTH, fdate)}</small>`);
       } else if (avg > 0 && watched > 0) {
         const projDays = Math.ceil(remaining / avg);
         const proj = new Date(now.getTime() + projDays * DAY);
-        finish = chip('🏁', 'Projected finish', `${fmtDate(proj)}<br><small>~${projDays} days at this pace</small>`);
+        finish = chip('🏁', 'Projected finish', `${fmtDate(proj)}<br><small>~${projDays} days · you'll be ${ageAt(BIRTH, proj)}</small>`);
       } else {
         finish = chip('🏁', 'Projected finish', `<small>Log an episode to see an estimate</small>`);
       }
@@ -398,6 +442,126 @@
       document.getElementById('content').innerHTML = sagaOrder().map(sagaCard).join('');
       renderOverall();
       renderStats();
+      if (currentView === 'stats') renderStatsPage();
+    }
+
+    // ── STATS PAGE (inline SVG charts from the watch log) ───────────────────────────
+    let currentView = 'tracker';
+    function switchView(v) {
+      currentView = v;
+      const stats = v === 'stats';
+      document.getElementById('stats-view').hidden = !stats;
+      document.getElementById('content').hidden = stats;
+      document.querySelector('.voyage').hidden = stats;
+      document.getElementById('expand-all').style.display = stats ? 'none' : '';
+      const btn = document.getElementById('view-btn');
+      btn.textContent = stats ? '📖 Tracker' : '📊 Stats';
+      if (location.hash !== (stats ? '#stats' : '')) location.hash = stats ? 'stats' : '';
+      if (stats) renderStatsPage();
+      window.scrollTo(0, 0);
+    }
+    document.getElementById('view-btn').addEventListener('click', () => switchView(currentView === 'stats' ? 'tracker' : 'stats'));
+    window.addEventListener('hashchange', () => switchView(location.hash === '#stats' ? 'stats' : 'tracker'));
+
+    // Turn the log into a chronological timeline (handles resets) + per-day totals.
+    function buildTimeline() {
+      const events = S.log.filter((e) => e.ts).slice().sort((a, b) => new Date(a.ts) - new Date(b.ts));
+      const perDay = {}, perDow = [0, 0, 0, 0, 0, 0, 0]; let running = 0; const cum = [];
+      for (const e of events) {
+        if (e.type === 'reset') { running = 0; cum.push({ t: new Date(e.ts), y: 0 }); continue; }
+        const d = e.delta || 0, day = e.ts.slice(0, 10);
+        running += d; cum.push({ t: new Date(e.ts), y: running });
+        perDay[day] = (perDay[day] || 0) + d;
+        if (d > 0) perDow[new Date(e.ts).getDay()] += d;
+      }
+      return { cum, perDay, perDow };
+    }
+
+    const niceMax = (v) => { if (v <= 5) return 5; const p = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / p) * p; };
+    const emptyChart = (msg) => `<div class="chart-empty">${msg}</div>`;
+    const shortDate = (t) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    function lineChart(cum, total) {
+      if (!cum.length) return emptyChart('No episodes logged yet — start watching!');
+      const W = 720, H = 240, pad = { l: 42, r: 14, t: 14, b: 26 };
+      const t0 = Math.min(new Date(START).getTime(), cum[0].t.getTime());
+      const tMax = Math.max(cum[cum.length - 1].t.getTime(), Date.now());
+      const yMax = niceMax(Math.max(total, ...cum.map((p) => p.y)) || 1);
+      const X = (t) => pad.l + (t - t0) / (tMax - t0 || 1) * (W - pad.l - pad.r);
+      const Y = (v) => H - pad.b - v / yMax * (H - pad.t - pad.b);
+      const pts = [{ t: new Date(t0), y: 0 }, ...cum];
+      const line = pts.map((p, i) => (i ? 'L' : 'M') + X(p.t.getTime()).toFixed(1) + ' ' + Y(p.y).toFixed(1)).join(' ');
+      const area = line + ` L ${X(tMax).toFixed(1)} ${Y(0)} L ${X(t0).toFixed(1)} ${Y(0)} Z`;
+      const yTicks = [0, .25, .5, .75, 1].map((f) => { const v = Math.round(yMax * f); return `<line class="c-grid" x1="${pad.l}" y1="${Y(v)}" x2="${W - pad.r}" y2="${Y(v)}"/><text class="c-axis" x="${pad.l - 6}" y="${Y(v) + 3}" text-anchor="end">${v}</text>`; }).join('');
+      const xTicks = [0, .5, 1].map((f) => { const t = t0 + (tMax - t0) * f; return `<text class="c-axis" x="${X(t)}" y="${H - 8}" text-anchor="middle">${shortDate(t)}</text>`; }).join('');
+      const goal = `<line class="c-goal" x1="${pad.l}" y1="${Y(total)}" x2="${W - pad.r}" y2="${Y(total)}"/><text class="c-goal-lab" x="${W - pad.r}" y="${Y(total) - 4}" text-anchor="end">goal ${total}</text>`;
+      return `<svg viewBox="0 0 ${W} ${H}"><defs><linearGradient id="cumg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1565c0" stop-opacity=".35"/><stop offset="1" stop-color="#1565c0" stop-opacity="0"/></linearGradient></defs>${yTicks}${goal}<path d="${area}" fill="url(#cumg)"/><path class="c-line" d="${line}"/>${xTicks}</svg>`;
+    }
+
+    function barChart(perDay) {
+      const days = Object.keys(perDay).filter((d) => perDay[d] > 0).sort();
+      if (!days.length) return emptyChart('No daily activity yet');
+      const W = 720, H = 200, pad = { l: 30, r: 10, t: 12, b: 30 };
+      const max = niceMax(Math.max(...days.map((d) => perDay[d])));
+      const bw = (W - pad.l - pad.r) / days.length, gap = Math.min(4, bw * .2);
+      const Y = (v) => H - pad.b - v / max * (H - pad.t - pad.b);
+      const bars = days.map((d, i) => {
+        const x = pad.l + i * bw, h = (H - pad.b) - Y(perDay[d]);
+        return `<rect x="${(x + gap / 2).toFixed(1)}" y="${Y(perDay[d]).toFixed(1)}" width="${(bw - gap).toFixed(1)}" height="${Math.max(0, h).toFixed(1)}" rx="3" fill="#1565c0"><title>${d}: ${perDay[d]} eps</title></rect>`;
+      }).join('');
+      const yTicks = [0, .5, 1].map((f) => { const v = Math.round(max * f); return `<line class="c-grid" x1="${pad.l}" y1="${Y(v)}" x2="${W - pad.r}" y2="${Y(v)}"/><text class="c-axis" x="${pad.l - 5}" y="${Y(v) + 3}" text-anchor="end">${v}</text>`; }).join('');
+      const step = Math.ceil(days.length / 8);
+      const xTicks = days.map((d, i) => i % step === 0 ? `<text class="c-axis" x="${pad.l + i * bw + bw / 2}" y="${H - 8}" text-anchor="middle">${shortDate(d)}</text>` : '').join('');
+      return `<svg viewBox="0 0 ${W} ${H}">${yTicks}${bars}${xTicks}</svg>`;
+    }
+
+    function dowChart(perDow) {
+      const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      if (!perDow.some((v) => v > 0)) return emptyChart('No data yet');
+      const W = 360, H = 200, pad = { l: 28, r: 10, t: 12, b: 26 };
+      const max = niceMax(Math.max(...perDow));
+      const bw = (W - pad.l - pad.r) / 7, gap = 7;
+      const Y = (v) => H - pad.b - v / max * (H - pad.t - pad.b);
+      const bars = perDow.map((v, i) => {
+        const x = pad.l + i * bw;
+        return `<rect x="${(x + gap / 2).toFixed(1)}" y="${Y(v).toFixed(1)}" width="${(bw - gap).toFixed(1)}" height="${Math.max(0, (H - pad.b) - Y(v)).toFixed(1)}" rx="3" fill="hsl(${28 + i * 12} 80% 55%)"><title>${names[i]}: ${v} eps</title></rect>` +
+          `<text class="c-axis" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${names[i]}</text>`;
+      }).join('');
+      return `<svg viewBox="0 0 ${W} ${H}">${bars}</svg>`;
+    }
+
+    function sagaChart() {
+      return sagaOrder().map((s) => {
+        const arcs = arcsOf(s), w = sumWatched(arcs), t = sumTotal(arcs), p = pct(w, t), hue = hueFor(s);
+        return `<div class="saga-bar-row"><span class="saga-bar-name" title="${esc(s)}">${esc(s)}</span>
+          <span class="saga-bar-track"><span class="saga-bar-fill" style="width:${p}%;background:linear-gradient(90deg,hsl(${hue} 75% 50%),hsl(${hue} 80% 64%))"></span></span>
+          <span class="saga-bar-val">${w}/${t}</span></div>`;
+      }).join('');
+    }
+
+    function renderStatsPage() {
+      const { cum, perDay, perDow } = buildTimeline();
+      const watched = sumWatched(S.arcs), total = sumTotal(S.arcs), p = pct(watched, total);
+      const start = new Date(START), now = new Date();
+      const calDays = Math.max(1, daysBetween(start, now));
+      const activeDays = Object.keys(perDay).filter((d) => perDay[d] > 0).length;
+      const bestDay = Object.entries(perDay).reduce((m, [d, v]) => v > m.v ? { d, v } : m, { d: null, v: 0 });
+      const remaining = total - watched, avg = watched / calDays;
+      const projTxt = remaining <= 0 ? 'Done! 🏆'
+        : avg > 0 ? fmtDate(new Date(now.getTime() + Math.ceil(remaining / avg) * DAY)) : '—';
+      const projSub = remaining <= 0 ? 'King of the Pirates'
+        : avg > 0 ? `you'll be ${ageAt(BIRTH, new Date(now.getTime() + Math.ceil(remaining / avg) * DAY))}` : 'log an episode';
+      const kpi = (val, lab, sub, hue) => `<div class="kpi" style="--hue:${hue}"><div class="kpi-val">${val}</div><div class="kpi-lab">${lab}</div><div class="kpi-sub">${sub}</div></div>`;
+      document.getElementById('kpis').innerHTML =
+        kpi(watched, 'Episodes watched', `of ${total} · ${p}%`, 210) +
+        kpi(avg.toFixed(2), 'Avg / day', `over ${calDays} days`, 145) +
+        kpi(bestDay.v || 0, 'Best day', bestDay.d ? fmtDate(bestDay.d) : '—', 28) +
+        kpi(activeDays, 'Active days', `${calDays - activeDays} rest days`, 280) +
+        kpi(projTxt, 'Projected finish', projSub, 48);
+      document.getElementById('chart-cum').innerHTML = lineChart(cum, total);
+      document.getElementById('chart-day').innerHTML = barChart(perDay);
+      document.getElementById('chart-dow').innerHTML = dowChart(perDow);
+      document.getElementById('chart-saga').innerHTML = sagaChart();
     }
 
     // ── Mutations ─────────────────────────────────────────────────────────────────
@@ -566,6 +730,7 @@
       try {
         const [arcs, log] = await Promise.all([apiGet(), apiGetLog().catch(() => [])]);
         S.arcs = arcs; S.log = log; render();
+        if (location.hash === '#stats') switchView('stats');
       }
       catch { document.getElementById('content').innerHTML = '<div class="errbox">🌊 Failed to load tracker data. Check the server and try again.</div>'; }
     })();
