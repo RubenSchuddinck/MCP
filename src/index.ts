@@ -41,6 +41,7 @@ function safeWebPath(rel: string): string {
 const REPO_DIR = resolve(__dirname, "..");
 const MANIFEST = join(REPO_DIR, "servers.json");
 const CADDYFILE = process.env.CADDYFILE || "/etc/caddy/Caddyfile";
+const MCP_SERVICE = process.env.MCP_SERVICE || "mcp";
 
 // Tracks running webservers by name (persists across stateless MCP requests)
 const webServers = new Map<string, ChildProcess>();
@@ -366,6 +367,35 @@ function createServer() {
       const reload = await run("sudo", ["systemctl", "reload", "caddy"]);
       return text(
         `Caddyfile updated with ${blocks.length} site(s) and reloaded (exit ${reload.code}).\n${reload.out}\n\n--- config ---\n${caddyfile}`
+      );
+    }
+  );
+
+  server.registerTool(
+    "restart_self",
+    {
+      description:
+        "Rebuild the MCP server (npm run build) and restart it via systemd. The connection drops for a few seconds and systemd brings it back — reconnect afterwards. Requires the mcp.service unit + passwordless sudo (see install-mcp-service.sh).",
+      inputSchema: {
+        skipBuild: z.boolean().optional().describe("Skip 'npm run build' and just restart the service"),
+      },
+    },
+    async ({ skipBuild }) => {
+      console.error("restart_self tool called");
+      if (!skipBuild) {
+        const b = await run("npm", ["run", "build"]);
+        if (b.code !== 0) return text(`Build failed (exit ${b.code}) — NOT restarting:\n${b.out}`);
+      }
+      // Queue the restart with --no-block so this response can flush before the
+      // process dies; the job is handed to PID 1 (outside our cgroup) so it
+      // survives our exit and brings the service back up.
+      const child = spawn("sudo", ["systemctl", "restart", "--no-block", MCP_SERVICE], {
+        detached: true,
+        stdio: "ignore",
+      });
+      child.unref();
+      return text(
+        `${skipBuild ? "" : "Build OK. "}Restarting '${MCP_SERVICE}' now — the connection will drop and return in a few seconds. Reconnect then.`
       );
     }
   );
