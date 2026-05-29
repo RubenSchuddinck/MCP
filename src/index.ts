@@ -45,7 +45,7 @@ const CADDYFILE = process.env.CADDYFILE || "/etc/caddy/Caddyfile";
 // Tracks running webservers by name (persists across stateless MCP requests)
 const webServers = new Map<string, ChildProcess>();
 
-type ServerEntry = { name: string; entry: string; port: number; domain?: string; start?: boolean };
+type ServerEntry = { name: string; entry: string; port: number; domain?: string; path?: string; start?: boolean };
 
 async function readManifest(): Promise<ServerEntry[]> {
   try {
@@ -291,12 +291,16 @@ function createServer() {
         entry: z.string().describe("Path to the entry file relative to repo root, e.g. 'web/server.mjs'"),
         port: z.number().describe("Local port the server listens on"),
         domain: z.string().optional().describe("Public domain for the Caddy reverse proxy, e.g. app.example.com"),
+        path: z
+          .string()
+          .optional()
+          .describe("Optional URL path prefix to mount under the domain, e.g. '/app1'. The prefix is stripped before proxying. Omit to serve at the domain root."),
       },
     },
-    async ({ name, entry, port, domain }) => {
+    async ({ name, entry, port, domain, path }) => {
       console.error(`register_webserver tool called: ${name}`);
       const servers = await readManifest();
-      const next: ServerEntry = { name, entry, port, ...(domain ? { domain } : {}) };
+      const next: ServerEntry = { name, entry, port, ...(domain ? { domain } : {}), ...(path ? { path } : {}) };
       const idx = servers.findIndex((s) => s.name === name);
       if (idx >= 0) next.start = servers[idx].start; // preserve start flag on update
       if (idx >= 0) servers[idx] = next;
@@ -313,7 +317,7 @@ function createServer() {
     "sync_caddy",
     {
       description:
-        "Regenerate the Caddyfile from servers.json (one reverse_proxy site block per server with a domain) and reload Caddy. Requires passwordless sudo for cp + systemctl.",
+        "Regenerate the Caddyfile from servers.json (servers sharing a domain are merged into one site block, routed by path) and reload Caddy. Requires passwordless sudo for cp + systemctl.",
       inputSchema: {},
     },
     async () => {
@@ -321,8 +325,36 @@ function createServer() {
       const servers = await readManifest();
       const withDomain = servers.filter((s) => s.domain);
       if (!withDomain.length) return text("No servers have a domain set; nothing to proxy.");
-      const caddyfile =
-        withDomain.map((s) => `${s.domain} {\n    reverse_proxy localhost:${s.port}\n}`).join("\n\n") + "\n";
+
+      // Group servers by domain so path-based routes share one site block.
+      const byDomain = new Map<string, ServerEntry[]>();
+      for (const s of withDomain) {
+        const arr = byDomain.get(s.domain!) ?? [];
+        arr.push(s);
+        byDomain.set(s.domain!, arr);
+      }
+
+      const blocks: string[] = [];
+      for (const [domain, entries] of byDomain) {
+        const pathed = entries.filter((e) => e.path);
+        const roots = entries.filter((e) => !e.path);
+        // Simple case: a single root server gets a bare reverse_proxy.
+        if (pathed.length === 0 && roots.length === 1) {
+          blocks.push(`${domain} {\n    reverse_proxy localhost:${roots[0].port}\n}`);
+          continue;
+        }
+        // Otherwise use handle blocks: path matchers first, then root catch-all.
+        const inner: string[] = [];
+        for (const e of pathed) {
+          const p = e.path!.startsWith("/") ? e.path! : `/${e.path}`;
+          inner.push(`    handle_path ${p}* {\n        reverse_proxy localhost:${e.port}\n    }`);
+        }
+        for (const e of roots) {
+          inner.push(`    handle {\n        reverse_proxy localhost:${e.port}\n    }`);
+        }
+        blocks.push(`${domain} {\n${inner.join("\n\n")}\n}`);
+      }
+      const caddyfile = blocks.join("\n\n") + "\n";
       const tmp = join(REPO_DIR, ".Caddyfile.tmp");
       await writeFile(tmp, caddyfile, "utf8");
       const cp = await run("sudo", ["cp", tmp, CADDYFILE]);
@@ -333,7 +365,7 @@ function createServer() {
       }
       const reload = await run("sudo", ["systemctl", "reload", "caddy"]);
       return text(
-        `Caddyfile updated with ${withDomain.length} site(s) and reloaded (exit ${reload.code}).\n${reload.out}\n\n--- config ---\n${caddyfile}`
+        `Caddyfile updated with ${blocks.length} site(s) and reloaded (exit ${reload.code}).\n${reload.out}\n\n--- config ---\n${caddyfile}`
       );
     }
   );

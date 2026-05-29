@@ -10,7 +10,9 @@
     {
       "name": "web",
       "entry": "web/server.mjs",
-      "port": 8080
+      "port": 8080,
+      "domain": "rubenplex.duckdns.org",
+      "path": "/app1"
     }
   ]
 }
