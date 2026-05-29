@@ -1,0 +1,324 @@
+{
+  "arcs": [
+    {
+      "id": "romance-dawn",
+      "saga": "East Blue",
+      "name": "Romance Dawn",
+      "epStart": 1,
+      "epEnd": 3,
+      "epCount": 3,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "orange-town",
+      "saga": "East Blue",
+      "name": "Orange Town",
+      "epStart": 4,
+      "epEnd": 8,
+      "epCount": 5,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "syrup-village",
+      "saga": "East Blue",
+      "name": "Syrup Village",
+      "epStart": 9,
+      "epEnd": 18,
+      "epCount": 10,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "baratie",
+      "saga": "East Blue",
+      "name": "Baratie",
+      "epStart": 19,
+      "epEnd": 30,
+      "epCount": 12,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "arlong-park",
+      "saga": "East Blue",
+      "name": "Arlong Park",
+      "epStart": 31,
+      "epEnd": 44,
+      "epCount": 14,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "loguetown",
+      "saga": "East Blue",
+      "name": "Loguetown",
+      "epStart": 45,
+      "epEnd": 53,
+      "epCount": 9,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "reverse-mountain",
+      "saga": "Alabasta",
+      "name": "Reverse Mountain",
+      "epStart": 54,
+      "epEnd": 60,
+      "epCount": 7,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "whisky-peak",
+      "saga": "Alabasta",
+      "name": "Whisky Peak",
+      "epStart": 61,
+      "epEnd": 63,
+      "epCount": 3,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "little-garden",
+      "saga": "Alabasta",
+      "name": "Little Garden",
+      "epStart": 64,
+      "epEnd": 67,
+      "epCount": 4,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "drum-island",
+      "saga": "Alabasta",
+      "name": "Drum Island",
+      "epStart": 68,
+      "epEnd": 77,
+      "epCount": 10,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "alabasta",
+      "saga": "Alabasta",
+      "name": "Alabasta",
+      "epStart": 78,
+      "epEnd": 130,
+      "epCount": 53,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "jaya",
+      "saga": "Sky Island",
+      "name": "Jaya",
+      "epStart": 131,
+      "epEnd": 143,
+      "epCount": 13,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "skypiea",
+      "saga": "Sky Island",
+      "name": "Skypiea",
+      "epStart": 144,
+      "epEnd": 195,
+      "epCount": 52,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "long-ring-long-land",
+      "saga": "Water 7",
+      "name": "Long Ring Long Land",
+      "epStart": 196,
+      "epEnd": 228,
+      "epCount": 33,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "water-7",
+      "saga": "Water 7",
+      "name": "Water 7",
+      "epStart": 229,
+      "epEnd": 263,
+      "epCount": 35,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "enies-lobby",
+      "saga": "Water 7",
+      "name": "Enies Lobby",
+      "epStart": 264,
+      "epEnd": 312,
+      "epCount": 49,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "post-enies-lobby",
+      "saga": "Water 7",
+      "name": "Post-Enies Lobby",
+      "epStart": 313,
+      "epEnd": 325,
+      "epCount": 13,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "thriller-bark",
+      "saga": "Thriller Bark",
+      "name": "Thriller Bark",
+      "epStart": 326,
+      "epEnd": 384,
+      "epCount": 59,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "sabaody-archipelago",
+      "saga": "Summit War",
+      "name": "Sabaody Archipelago",
+      "epStart": 385,
+      "epEnd": 405,
+      "epCount": 21,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "amazon-lily",
+      "saga": "Summit War",
+      "name": "Amazon Lily",
+      "epStart": 406,
+      "epEnd": 421,
+      "epCount": 16,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "impel-down",
+      "saga": "Summit War",
+      "name": "Impel Down",
+      "epStart": 422,
+      "epEnd": 456,
+      "epCount": 35,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "marineford",
+      "saga": "Summit War",
+      "name": "Marineford",
+      "epStart": 457,
+      "epEnd": 489,
+      "epCount": 33,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "post-war",
+      "saga": "Summit War",
+      "name": "Post-War",
+      "epStart": 490,
+      "epEnd": 516,
+      "epCount": 27,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "return-to-sabaody",
+      "saga": "Fish-Man Island",
+      "name": "Return to Sabaody",
+      "epStart": 517,
+      "epEnd": 522,
+      "epCount": 6,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "fish-man-island",
+      "saga": "Fish-Man Island",
+      "name": "Fish-Man Island",
+      "epStart": 523,
+      "epEnd": 574,
+      "epCount": 52,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "punk-hazard",
+      "saga": "Dressrosa",
+      "name": "Punk Hazard",
+      "epStart": 575,
+      "epEnd": 625,
+      "epCount": 51,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "dressrosa",
+      "saga": "Dressrosa",
+      "name": "Dressrosa",
+      "epStart": 629,
+      "epEnd": 746,
+      "epCount": 118,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "zou",
+      "saga": "Whole Cake Island",
+      "name": "Zou",
+      "epStart": 751,
+      "epEnd": 779,
+      "epCount": 29,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "whole-cake-island",
+      "saga": "Whole Cake Island",
+      "name": "Whole Cake Island",
+      "epStart": 783,
+      "epEnd": 877,
+      "epCount": 95,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "reverie",
+      "saga": "Whole Cake Island",
+      "name": "Reverie",
+      "epStart": 878,
+      "epEnd": 889,
+      "epCount": 12,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "wano-country",
+      "saga": "Wano Country",
+      "name": "Wano Country",
+      "epStart": 890,
+      "epEnd": 1085,
+      "epCount": 196,
+      "watchedCount": 0,
+      "notes": ""
+    },
+    {
+      "id": "egghead",
+      "saga": "Final Saga",
+      "name": "Egghead",
+      "epStart": 1086,
+      "epEnd": 1122,
+      "epCount": 37,
+      "watchedCount": 0,
+      "notes": ""
+    }
+  ]
+}

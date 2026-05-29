@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>One Piece Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #eef4fb; --surface: #ffffff; --border: #d9e2ee;
+      --text: #0f1f33; --text-2: #46586f; --text-3: #93a3b8;
+      --primary: #1565c0; --primary-2: #0d47a1; --primary-bg: #e8f1fc;
+      --gold: #e0a82e; --done: #2e9e6b; --done-bg: #e7f6ee;
+      --radius: 14px;
+      --shadow: 0 1px 3px rgba(13,71,161,.10), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md: 0 4px 14px rgba(13,71,161,.12), 0 1px 3px rgba(0,0,0,.06);
+      --transition: .18s ease;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.5; }
+
+    /* ── HEADER ── */
+    .app-header { position: sticky; top: 0; z-index: 100; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: #fff; box-shadow: var(--shadow-md); }
+    .header-top { display: flex; align-items: center; gap: 14px; padding: 16px 22px 12px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .brand-icon { font-size: 2rem; line-height: 1; }
+    .brand-title { font-size: 1.3rem; font-weight: 800; letter-spacing: -.02em; }
+    .brand-sub { font-size: .8rem; opacity: .82; font-weight: 500; }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 15px; border: 1.5px solid rgba(255,255,255,.45); border-radius: 10px; background: rgba(255,255,255,.12); color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all var(--transition); white-space: nowrap; }
+    .btn:hover { background: rgba(255,255,255,.24); border-color: #fff; }
+
+    /* ── OVERALL PROGRESS ── */
+    .overall { padding: 4px 22px 20px; }
+    .overall-stats { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 9px; }
+    .overall-pct { font-size: 1.9rem; font-weight: 800; letter-spacing: -.02em; }
+    .overall-meta { font-size: .9rem; opacity: .9; }
+    .overall-current { margin-left: auto; font-size: .86rem; background: rgba(255,255,255,.16); padding: 5px 12px; border-radius: 20px; font-weight: 600; }
+    .bar { height: 12px; border-radius: 20px; background: rgba(255,255,255,.22); overflow: hidden; }
+    .bar > span { display: block; height: 100%; border-radius: 20px; background: linear-gradient(90deg, var(--gold), #ffd270); transition: width .4s ease; }
+
+    /* ── LAYOUT ── */
+    .wrap { max-width: 920px; margin: 0 auto; padding: 22px 18px 60px; }
+    .saga { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; box-shadow: var(--shadow); overflow: hidden; }
+    .saga-head { display: flex; align-items: center; gap: 14px; padding: 15px 18px; cursor: pointer; user-select: none; transition: background var(--transition); }
+    .saga-head:hover { background: var(--primary-bg); }
+    .saga-chevron { font-size: .8rem; color: var(--text-3); transition: transform .25s ease; flex-shrink: 0; }
+    .saga.collapsed .saga-chevron { transform: rotate(-90deg); }
+    .saga-name { font-size: 1.06rem; font-weight: 700; flex-shrink: 0; }
+    .saga-progress { flex: 1; min-width: 80px; display: flex; align-items: center; gap: 10px; }
+    .saga-progress .bar { flex: 1; height: 8px; background: var(--bg); }
+    .saga-progress .bar > span { background: linear-gradient(90deg, var(--primary), #4a90d9); }
+    .saga-progress.full .bar > span { background: linear-gradient(90deg, var(--done), #5fce9b); }
+    .saga-count { font-size: .8rem; color: var(--text-2); font-weight: 600; min-width: 70px; text-align: right; }
+    .saga-body { display: none; border-top: 1px solid var(--border); }
+    .saga:not(.collapsed) .saga-body { display: block; }
+
+    /* ── ARC ROW ── */
+    .arc { display: flex; align-items: center; gap: 14px; padding: 13px 18px; border-bottom: 1px solid var(--border); transition: background var(--transition); }
+    .arc:last-child { border-bottom: none; }
+    .arc.done { background: var(--done-bg); }
+    .arc-check { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--border); background: var(--surface); cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; transition: all var(--transition); }
+    .arc-check:hover { border-color: var(--primary); }
+    .arc.done .arc-check { background: var(--done); border-color: var(--done); }
+    .arc-main { flex: 1; min-width: 0; }
+    .arc-name { font-weight: 650; font-size: .98rem; }
+    .arc-eps { font-size: .78rem; color: var(--text-3); }
+    .arc-progress { display: flex; align-items: center; gap: 9px; min-width: 200px; }
+    .arc-progress .bar { flex: 1; height: 7px; background: var(--bg); }
+    .arc-progress .bar > span { background: linear-gradient(90deg, var(--primary), #4a90d9); }
+    .arc.done .arc-progress .bar > span { background: var(--done); }
+    .arc-count { font-size: .78rem; color: var(--text-2); font-weight: 600; min-width: 58px; text-align: right; font-variant-numeric: tabular-nums; }
+    .stepper { display: flex; align-items: center; gap: 2px; }
+    .step-btn { width: 26px; height: 26px; border: 1.5px solid var(--border); background: var(--surface); border-radius: 7px; cursor: pointer; font-size: 15px; font-weight: 700; color: var(--text-2); line-height: 1; display: flex; align-items: center; justify-content: center; transition: all var(--transition); }
+    .step-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+    .step-btn:disabled { opacity: .35; cursor: default; }
+
+    .loading, .errbox { text-align: center; padding: 60px 20px; color: var(--text-2); }
+    .errbox { color: #c0392b; }
+
+    @media (max-width: 620px) {
+      .arc { flex-wrap: wrap; }
+      .arc-progress { min-width: 100%; order: 3; padding-left: 38px; }
+      .overall-current { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-top">
+      <div class="brand">
+        <span class="brand-icon">🏴‍☠️</span>
+        <div>
+          <div class="brand-title">One Piece Tracker</div>
+          <div class="brand-sub">Your voyage through the Grand Line</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="btn" id="expand-all">⤢ Expand all</button>
+        <button class="btn" id="reset-btn">↺ Reset progress</button>
+      </div>
+    </div>
+    <div class="overall">
+      <div class="overall-stats">
+        <span class="overall-pct" id="ov-pct">0%</span>
+        <span class="overall-meta" id="ov-meta">0 / 0 episodes watched</span>
+        <span class="overall-current" id="ov-current">⚓ Set sail!</span>
+      </div>
+      <div class="bar"><span id="ov-bar" style="width:0%"></span></div>
+    </div>
+  </header>
+
+  <main class="wrap" id="content">
+    <div class="loading">Loading your log pose…</div>
+  </main>
+
+  <script>
+    // ── API ───────────────────────────────────────────────────────────────────────
+    const BASE = window.location.pathname.replace(/\/(onepiece|index\.html)?\/?$/, '') + '/';
+    async function apiGet() { const r = await fetch(BASE + 'api/onepiece'); if (!r.ok) throw new Error('API error'); return r.json(); }
+    async function apiPut(id, arc) { const r = await fetch(BASE + 'api/onepiece/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(arc) }); if (!r.ok) throw new Error('Save failed'); return r.json(); }
+    async function apiReset() { const r = await fetch(BASE + 'api/onepiece/reset', { method: 'POST' }); if (!r.ok) throw new Error('Reset failed'); return r.json(); }
+
+    // ── State ─────────────────────────────────────────────────────────────────────
+    const S = { arcs: [], collapsed: new Set() };
+
+    // ── Helpers ───────────────────────────────────────────────────────────────────
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    function sagaOrder() { const seen = []; S.arcs.forEach((a) => { if (!seen.includes(a.saga)) seen.push(a.saga); }); return seen; }
+    function arcsOf(saga) { return S.arcs.filter((a) => a.saga === saga); }
+    function sumWatched(arcs) { return arcs.reduce((n, a) => n + (a.watchedCount || 0), 0); }
+    function sumTotal(arcs) { return arcs.reduce((n, a) => n + (a.epCount || 0), 0); }
+    function pct(w, t) { return t ? Math.round((w / t) * 100) : 0; }
+
+    // First episode not yet watched, scanning arcs in canonical order.
+    function currentEpisode() {
+      for (const a of S.arcs) {
+        if ((a.watchedCount || 0) < a.epCount) return { ep: a.epStart + (a.watchedCount || 0), arc: a.name };
+      }
+      return null;
+    }
+
+    // ── Render ──────────────────────────────────────────────────────────────────────
+    function renderOverall() {
+      const w = sumWatched(S.arcs), t = sumTotal(S.arcs), p = pct(w, t);
+      document.getElementById('ov-pct').textContent = p + '%';
+      document.getElementById('ov-meta').textContent = w + ' / ' + t + ' episodes watched';
+      document.getElementById('ov-bar').style.width = p + '%';
+      const cur = currentEpisode();
+      document.getElementById('ov-current').textContent = cur
+        ? '⚓ Up next: Ep ' + cur.ep + ' · ' + cur.arc
+        : '🎉 All caught up — King of the Pirates!';
+    }
+
+    function arcRow(a) {
+      const w = a.watchedCount || 0, p = pct(w, a.epCount), done = w >= a.epCount;
+      return `<div class="arc ${done ? 'done' : ''}" data-id="${a.id}">
+        <div class="arc-check" data-act="toggle" title="${done ? 'Mark unwatched' : 'Mark arc watched'}">${done ? '✓' : ''}</div>
+        <div class="arc-main">
+          <div class="arc-name">${esc(a.name)}</div>
+          <div class="arc-eps">Episodes ${a.epStart}–${a.epEnd} · ${a.epCount} eps</div>
+        </div>
+        <div class="arc-progress">
+          <div class="stepper">
+            <button class="step-btn" data-act="dec" ${w <= 0 ? 'disabled' : ''}>−</button>
+            <button class="step-btn" data-act="inc" ${w >= a.epCount ? 'disabled' : ''}>+</button>
+          </div>
+          <div class="bar"><span style="width:${p}%"></span></div>
+          <div class="arc-count">${w} / ${a.epCount}</div>
+        </div>
+      </div>`;
+    }
+
+    function sagaCard(saga) {
+      const arcs = arcsOf(saga), w = sumWatched(arcs), t = sumTotal(arcs), p = pct(w, t);
+      const collapsed = S.collapsed.has(saga), full = w >= t && t > 0;
+      return `<section class="saga ${collapsed ? 'collapsed' : ''}" data-saga="${esc(saga)}">
+        <div class="saga-head" data-act="toggle-saga">
+          <span class="saga-chevron">▼</span>
+          <span class="saga-name">${esc(saga)}</span>
+          <div class="saga-progress ${full ? 'full' : ''}">
+            <div class="bar"><span style="width:${p}%"></span></div>
+          </div>
+          <span class="saga-count">${w} / ${t} eps</span>
+        </div>
+        <div class="saga-body">${arcs.map(arcRow).join('')}</div>
+      </section>`;
+    }
+
+    function render() {
+      document.getElementById('content').innerHTML = sagaOrder().map(sagaCard).join('');
+      renderOverall();
+    }
+
+    // ── Mutations ─────────────────────────────────────────────────────────────────
+    function findArc(id) { return S.arcs.find((a) => a.id === id); }
+
+    async function setWatched(id, value) {
+      const arc = findArc(id);
+      if (!arc) return;
+      const clamped = Math.max(0, Math.min(arc.epCount, value));
+      if (clamped === arc.watchedCount) return;
+      const prev = arc.watchedCount;
+      arc.watchedCount = clamped; // optimistic
+      render();
+      try { const saved = await apiPut(id, { watchedCount: clamped }); Object.assign(arc, saved); }
+      catch { arc.watchedCount = prev; alert('Could not save — check the server.'); }
+      render();
+    }
+
+    // ── Events ──────────────────────────────────────────────────────────────────────
+    document.getElementById('content').addEventListener('click', (e) => {
+      const sagaHead = e.target.closest('[data-act="toggle-saga"]');
+      if (sagaHead) {
+        const saga = sagaHead.closest('.saga').dataset.saga;
+        if (S.collapsed.has(saga)) S.collapsed.delete(saga); else S.collapsed.add(saga);
+        sagaHead.closest('.saga').classList.toggle('collapsed');
+        return;
+      }
+      const arcEl = e.target.closest('.arc');
+      if (!arcEl) return;
+      const id = arcEl.dataset.id, arc = findArc(id);
+      const act = e.target.closest('[data-act]')?.dataset.act;
+      if (act === 'toggle') setWatched(id, arc.watchedCount >= arc.epCount ? 0 : arc.epCount);
+      else if (act === 'inc') setWatched(id, arc.watchedCount + 1);
+      else if (act === 'dec') setWatched(id, arc.watchedCount - 1);
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', async () => {
+      if (!confirm('Reset all watch progress to zero?')) return;
+      try { S.arcs = await apiReset(); render(); }
+      catch { alert('Reset failed.'); }
+    });
+
+    let allExpanded = true;
+    document.getElementById('expand-all').addEventListener('click', (e) => {
+      allExpanded = !allExpanded;
+      if (allExpanded) S.collapsed.clear();
+      else sagaOrder().forEach((s) => S.collapsed.add(s));
+      e.currentTarget.textContent = allExpanded ? '⤢ Expand all' : '⤡ Collapse all';
+      render();
+    });
+
+    // ── Boot ──────────────────────────────────────────────────────────────────────
+    (async () => {
+      try { S.arcs = await apiGet(); render(); }
+      catch { document.getElementById('content').innerHTML = '<div class="errbox">Failed to load tracker data.</div>'; }
+    })();
+  </script>
+</body>
+</html>
