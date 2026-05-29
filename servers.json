@@ -13,13 +13,6 @@
       "port": 8080,
       "domain": "rubenplex.duckdns.org",
       "path": "/app1"
-    },
-    {
-      "name": "onepiece",
-      "entry": "web/onepiece-server.mjs",
-      "port": 8083,
-      "domain": "rubenplex.duckdns.org",
-      "path": "/onepiece"
     }
   ]
 }
