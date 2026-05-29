@@ -38,6 +38,42 @@ function safeWebPath(rel: string): string {
   return target;
 }
 
+const REPO_DIR = resolve(__dirname, "..");
+const MANIFEST = join(REPO_DIR, "servers.json");
+const CADDYFILE = process.env.CADDYFILE || "/etc/caddy/Caddyfile";
+
+// Tracks running webservers by name (persists across stateless MCP requests)
+const webServers = new Map<string, ChildProcess>();
+
+type ServerEntry = { name: string; entry: string; port: number; domain?: string; start?: boolean };
+
+async function readManifest(): Promise<ServerEntry[]> {
+  try {
+    const data = JSON.parse(await readFile(MANIFEST, "utf8"));
+    return Array.isArray(data.servers) ? data.servers : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeManifest(servers: ServerEntry[]): Promise<void> {
+  await writeFile(MANIFEST, JSON.stringify({ servers }, null, 2) + "\n", "utf8");
+}
+
+// Run a command, capturing combined stdout+stderr
+function run(cmd: string, args: string[], cwd = REPO_DIR): Promise<{ code: number; out: string }> {
+  return new Promise((res) => {
+    const p = spawn(cmd, args, { cwd });
+    let out = "";
+    p.stdout?.on("data", (d) => (out += d));
+    p.stderr?.on("data", (d) => (out += d));
+    p.on("close", (code) => res({ code: code ?? -1, out: out.trim() }));
+    p.on("error", (e) => res({ code: -1, out: String(e) }));
+  });
+}
+
+const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -188,6 +224,117 @@ function createServer() {
       } catch (e) {
         return { content: [{ type: "text", text: `Error writing file: ${String(e)}` }] };
       }
+    }
+  );
+
+  server.registerTool(
+    "git_pull",
+    {
+      description: "Pull the latest changes for this repository (git pull --ff-only in the repo root).",
+      inputSchema: {},
+    },
+    async () => {
+      console.error("git_pull tool called");
+      const { code, out } = await run("git", ["pull", "--ff-only"]);
+      return text(`git pull exited ${code}\n\n${out || "(no output)"}`);
+    }
+  );
+
+  server.registerTool(
+    "start_all_webservers",
+    {
+      description:
+        "Start every webserver listed in servers.json (entries with start:false are skipped). Already-running servers are left alone.",
+      inputSchema: {},
+    },
+    async () => {
+      console.error("start_all_webservers tool called");
+      const servers = await readManifest();
+      const startable = servers.filter((s) => s.start !== false);
+      if (!startable.length) return text("No startable servers defined in servers.json.");
+      const lines: string[] = [];
+      for (const s of startable) {
+        const existing = webServers.get(s.name);
+        if (existing && existing.exitCode === null && !existing.killed) {
+          lines.push(`${s.name}: already running (pid ${existing.pid})`);
+          continue;
+        }
+        const entryPath = resolve(REPO_DIR, s.entry);
+        if (entryPath !== REPO_DIR && !entryPath.startsWith(REPO_DIR + sep)) {
+          lines.push(`${s.name}: entry '${s.entry}' escapes the repo, skipped`);
+          continue;
+        }
+        const env = { ...process.env, WEB_PORT: String(s.port), PORT: String(s.port) };
+        const proc = spawn(process.execPath, [entryPath], { cwd: REPO_DIR, env, stdio: "ignore" });
+        proc.on("exit", () => {
+          if (webServers.get(s.name) === proc) webServers.delete(s.name);
+        });
+        webServers.set(s.name, proc);
+        await new Promise((r) => setTimeout(r, 300));
+        lines.push(
+          proc.exitCode === null
+            ? `${s.name}: started (pid ${proc.pid}) on port ${s.port}`
+            : `${s.name}: failed to start (port ${s.port} in use?)`
+        );
+      }
+      return text(lines.join("\n"));
+    }
+  );
+
+  server.registerTool(
+    "register_webserver",
+    {
+      description:
+        "Add or update a webserver in servers.json so it can be started and reverse-proxied. Run sync_caddy afterwards to publish the proxy.",
+      inputSchema: {
+        name: z.string().describe("Unique short name for the server"),
+        entry: z.string().describe("Path to the entry file relative to repo root, e.g. 'web/server.mjs'"),
+        port: z.number().describe("Local port the server listens on"),
+        domain: z.string().optional().describe("Public domain for the Caddy reverse proxy, e.g. app.example.com"),
+      },
+    },
+    async ({ name, entry, port, domain }) => {
+      console.error(`register_webserver tool called: ${name}`);
+      const servers = await readManifest();
+      const next: ServerEntry = { name, entry, port, ...(domain ? { domain } : {}) };
+      const idx = servers.findIndex((s) => s.name === name);
+      if (idx >= 0) next.start = servers[idx].start; // preserve start flag on update
+      if (idx >= 0) servers[idx] = next;
+      else servers.push(next);
+      await writeManifest(servers);
+      return text(
+        `Registered '${name}' -> ${entry} on port ${port}${domain ? ` (domain ${domain})` : ""}.` +
+          (domain ? " Run sync_caddy to publish the reverse proxy." : "")
+      );
+    }
+  );
+
+  server.registerTool(
+    "sync_caddy",
+    {
+      description:
+        "Regenerate the Caddyfile from servers.json (one reverse_proxy site block per server with a domain) and reload Caddy. Requires passwordless sudo for cp + systemctl.",
+      inputSchema: {},
+    },
+    async () => {
+      console.error("sync_caddy tool called");
+      const servers = await readManifest();
+      const withDomain = servers.filter((s) => s.domain);
+      if (!withDomain.length) return text("No servers have a domain set; nothing to proxy.");
+      const caddyfile =
+        withDomain.map((s) => `${s.domain} {\n    reverse_proxy localhost:${s.port}\n}`).join("\n\n") + "\n";
+      const tmp = join(REPO_DIR, ".Caddyfile.tmp");
+      await writeFile(tmp, caddyfile, "utf8");
+      const cp = await run("sudo", ["cp", tmp, CADDYFILE]);
+      if (cp.code !== 0) {
+        return text(
+          `Generated the Caddyfile but failed to install it to ${CADDYFILE} (need passwordless sudo?):\n${cp.out}\n\n--- generated config ---\n${caddyfile}`
+        );
+      }
+      const reload = await run("sudo", ["systemctl", "reload", "caddy"]);
+      return text(
+        `Caddyfile updated with ${withDomain.length} site(s) and reloaded (exit ${reload.code}).\n${reload.out}\n\n--- config ---\n${caddyfile}`
+      );
     }
   );
 

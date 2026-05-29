@@ -1,0 +1,16 @@
+{
+  "servers": [
+    {
+      "name": "mcp",
+      "entry": "build/index.js",
+      "port": 3000,
+      "domain": "rubenplex.duckdns.org",
+      "start": false
+    },
+    {
+      "name": "web",
+      "entry": "web/server.mjs",
+      "port": 8080
+    }
+  ]
+}
