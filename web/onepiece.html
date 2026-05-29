@@ -7,96 +7,201 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #eef4fb; --surface: #ffffff; --border: #d9e2ee;
-      --text: #0f1f33; --text-2: #46586f; --text-3: #93a3b8;
-      --primary: #1565c0; --primary-2: #0d47a1; --primary-bg: #e8f1fc;
-      --gold: #e0a82e; --done: #2e9e6b; --done-bg: #e7f6ee;
-      --radius: 14px;
-      --shadow: 0 1px 3px rgba(13,71,161,.10), 0 1px 2px rgba(0,0,0,.04);
-      --shadow-md: 0 4px 14px rgba(13,71,161,.12), 0 1px 3px rgba(0,0,0,.06);
-      --transition: .18s ease;
+      --surface: rgba(255,255,255,.86); --surface-solid: #ffffff;
+      --border: rgba(120,150,190,.28);
+      --text: #0d2233; --text-2: #3f5871; --text-3: #8095ac;
+      --primary: #1565c0; --primary-2: #0d3c8a; --primary-bg: #e8f1fc;
+      --gold: #f0b429; --gold-2: #ffd76b; --done: #16a36b; --done-bg: #e3f7ee;
+      --radius: 16px;
+      --shadow: 0 2px 8px rgba(7,38,72,.12), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md: 0 8px 26px rgba(7,38,72,.18);
+      --transition: .2s ease;
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.5; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.5;
+      overflow-x: hidden; position: relative;
+    }
+
+    /* ── OCEAN BACKGROUND (fixed, behind everything) ── */
+    .sky {
+      position: fixed; inset: 0; z-index: -3;
+      background:
+        radial-gradient(1100px 520px at 78% -8%, #ffe9a8 0%, rgba(255,233,168,0) 60%),
+        linear-gradient(180deg, #7ec8f0 0%, #9fdcf2 26%, #bfeaf2 40%, #2f8fd0 58%, #155fae 78%, #0c3f86 100%);
+    }
+    .sun {
+      position: fixed; top: 7vh; right: 12vw; width: 120px; height: 120px; z-index: -3;
+      border-radius: 50%; background: radial-gradient(circle, #fff6d8 0%, #ffd76b 45%, #ffb73d 75%, rgba(255,183,61,0) 80%);
+      filter: blur(.3px); animation: sun-glow 6s ease-in-out infinite;
+    }
+    @keyframes sun-glow { 0%,100% { transform: scale(1); opacity: .92; } 50% { transform: scale(1.07); opacity: 1; } }
+
+    .cloud { position: fixed; z-index: -3; color: #fff; opacity: .85; filter: drop-shadow(0 6px 10px rgba(0,40,80,.10)); pointer-events: none; }
+    .cloud svg { display: block; }
+    .cloud.c1 { top: 12vh; left: -180px; animation: drift 46s linear infinite; }
+    .cloud.c2 { top: 22vh; left: -260px; transform: scale(.7); opacity: .65; animation: drift 66s linear infinite 6s; }
+    .cloud.c3 { top: 5vh; left: -220px; transform: scale(1.15); opacity: .7; animation: drift 82s linear infinite 12s; }
+    @keyframes drift { from { transform: translateX(0) translateZ(0); } to { transform: translateX(118vw); } }
+
+    /* layered animated waves anchored to bottom */
+    .waves { position: fixed; left: 0; right: 0; bottom: 0; z-index: -2; line-height: 0; pointer-events: none; }
+    .waves svg { display: block; width: 200%; height: 130px; }
+    .waves .w1 { animation: wave 11s linear infinite; opacity: .55; }
+    .waves .w2 { animation: wave 17s linear infinite reverse; opacity: .4; margin-top: -118px; }
+    .waves .w3 { animation: wave 26s linear infinite; opacity: .3; margin-top: -118px; }
+    @keyframes wave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    .ghost-skull {
+      position: fixed; z-index: -2; bottom: 6vh; left: 50%; transform: translateX(-50%);
+      font-size: 30vmin; opacity: .05; filter: blur(1px); pointer-events: none; user-select: none;
+      animation: bob 7s ease-in-out infinite;
+    }
+    @keyframes bob { 0%,100% { transform: translateX(-50%) translateY(0) rotate(-3deg); } 50% { transform: translateX(-50%) translateY(-14px) rotate(3deg); } }
+
+    #confetti-canvas { position: fixed; inset: 0; z-index: 9999; pointer-events: none; display: none; }
 
     /* ── HEADER ── */
-    .app-header { position: sticky; top: 0; z-index: 100; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: #fff; box-shadow: var(--shadow-md); }
+    .app-header {
+      position: sticky; top: 0; z-index: 100; color: #fff;
+      background: linear-gradient(135deg, #0d3c8a 0%, #1565c0 55%, #1f7fd0 100%);
+      box-shadow: var(--shadow-md);
+      border-bottom: 3px solid var(--gold);
+    }
     .header-top { display: flex; align-items: center; gap: 14px; padding: 16px 22px 12px; flex-wrap: wrap; }
-    .brand { display: flex; align-items: center; gap: 11px; }
-    .brand-icon { font-size: 2rem; line-height: 1; }
-    .brand-title { font-size: 1.3rem; font-weight: 800; letter-spacing: -.02em; }
-    .brand-sub { font-size: .8rem; opacity: .82; font-weight: 500; }
-    .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-    .btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 15px; border: 1.5px solid rgba(255,255,255,.45); border-radius: 10px; background: rgba(255,255,255,.12); color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all var(--transition); white-space: nowrap; }
-    .btn:hover { background: rgba(255,255,255,.24); border-color: #fff; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon { font-size: 2.1rem; line-height: 1; animation: flag 3.2s ease-in-out infinite; transform-origin: bottom left; }
+    @keyframes flag { 0%,100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
+    .brand-title { font-size: 1.4rem; font-weight: 900; letter-spacing: -.02em; text-shadow: 0 2px 6px rgba(0,0,0,.25); }
+    .brand-title .accent { color: var(--gold-2); }
+    .brand-sub { font-size: .8rem; opacity: .85; font-weight: 600; letter-spacing: .02em; }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 15px;
+      border: 1.5px solid rgba(255,255,255,.5); border-radius: 11px; background: rgba(255,255,255,.14);
+      color: #fff; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: all var(--transition); white-space: nowrap;
+      backdrop-filter: blur(4px);
+    }
+    .btn:hover { background: rgba(255,255,255,.28); border-color: #fff; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn.gold { background: var(--gold); border-color: var(--gold); color: #4a3500; }
+    .btn.gold:hover { background: var(--gold-2); }
+    .btn.playing { background: var(--gold); border-color: var(--gold); color: #4a3500; }
 
     /* ── OVERALL PROGRESS ── */
-    .overall { padding: 4px 22px 20px; }
-    .overall-stats { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 9px; }
-    .overall-pct { font-size: 1.9rem; font-weight: 800; letter-spacing: -.02em; }
-    .overall-meta { font-size: .9rem; opacity: .9; }
-    .overall-current { margin-left: auto; font-size: .86rem; background: rgba(255,255,255,.16); padding: 5px 12px; border-radius: 20px; font-weight: 600; }
-    .bar { height: 12px; border-radius: 20px; background: rgba(255,255,255,.22); overflow: hidden; }
-    .bar > span { display: block; height: 100%; border-radius: 20px; background: linear-gradient(90deg, var(--gold), #ffd270); transition: width .4s ease; }
+    .overall { padding: 2px 22px 22px; }
+    .overall-stats { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+    .overall-pct { font-size: 2.1rem; font-weight: 900; letter-spacing: -.02em; text-shadow: 0 2px 6px rgba(0,0,0,.22); }
+    .overall-meta { font-size: .9rem; opacity: .92; font-weight: 600; }
+    .overall-current { margin-left: auto; font-size: .86rem; background: rgba(255,255,255,.18); padding: 6px 14px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(255,255,255,.25); animation: pulse 2.6s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,215,107,.0); } 50% { box-shadow: 0 0 0 5px rgba(255,215,107,.18); } }
+    .bar { height: 14px; border-radius: 20px; background: rgba(255,255,255,.22); overflow: hidden; position: relative; }
+    .bar > span { display: block; height: 100%; border-radius: 20px; background: linear-gradient(90deg, var(--gold), var(--gold-2)); transition: width .55s cubic-bezier(.22,1,.36,1); position: relative; }
+    /* moving shimmer on filled bars */
+    .bar > span::after {
+      content: ""; position: absolute; inset: 0; border-radius: 20px;
+      background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,.55) 50%, transparent 80%);
+      background-size: 200% 100%; animation: shimmer 2.4s linear infinite;
+    }
+
+    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
     /* ── LAYOUT ── */
-    .wrap { max-width: 920px; margin: 0 auto; padding: 22px 18px 60px; }
-    .saga { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; box-shadow: var(--shadow); overflow: hidden; }
-    .saga-head { display: flex; align-items: center; gap: 14px; padding: 15px 18px; cursor: pointer; user-select: none; transition: background var(--transition); }
-    .saga-head:hover { background: var(--primary-bg); }
-    .saga-chevron { font-size: .8rem; color: var(--text-3); transition: transform .25s ease; flex-shrink: 0; }
+    .wrap { max-width: 940px; margin: 0 auto; padding: 26px 18px 80px; }
+    .saga {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      margin-bottom: 18px; box-shadow: var(--shadow); overflow: hidden;
+      backdrop-filter: blur(10px) saturate(1.1); -webkit-backdrop-filter: blur(10px) saturate(1.1);
+      border-left: 5px solid hsl(var(--hue,210) 70% 52%);
+      opacity: 0; transform: translateY(16px); animation: rise .5s cubic-bezier(.22,1,.36,1) forwards;
+    }
+    @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+    .saga-head { display: flex; align-items: center; gap: 14px; padding: 16px 18px; cursor: pointer; user-select: none; transition: background var(--transition); }
+    .saga-head:hover { background: rgba(21,101,192,.07); }
+    .saga-chevron { font-size: .8rem; color: hsl(var(--hue,210) 60% 45%); transition: transform .3s ease; flex-shrink: 0; }
     .saga.collapsed .saga-chevron { transform: rotate(-90deg); }
-    .saga-name { font-size: 1.06rem; font-weight: 700; flex-shrink: 0; }
+    .saga-name { font-size: 1.1rem; font-weight: 800; flex-shrink: 0; color: var(--text); letter-spacing: -.01em; }
+    .saga-badge { font-size: 1.05rem; }
     .saga-progress { flex: 1; min-width: 80px; display: flex; align-items: center; gap: 10px; }
-    .saga-progress .bar { flex: 1; height: 8px; background: var(--bg); }
-    .saga-progress .bar > span { background: linear-gradient(90deg, var(--primary), #4a90d9); }
-    .saga-progress.full .bar > span { background: linear-gradient(90deg, var(--done), #5fce9b); }
-    .saga-count { font-size: .8rem; color: var(--text-2); font-weight: 600; min-width: 70px; text-align: right; }
+    .saga-progress .bar { flex: 1; height: 9px; background: rgba(120,150,190,.18); }
+    .saga-progress .bar > span { background: linear-gradient(90deg, hsl(var(--hue,210) 75% 50%), hsl(var(--hue,210) 80% 65%)); }
+    .saga-progress.full .bar > span { background: linear-gradient(90deg, var(--done), #57d39d); }
+    .saga-count { font-size: .8rem; color: var(--text-2); font-weight: 700; min-width: 72px; text-align: right; font-variant-numeric: tabular-nums; }
     .saga-body { display: none; border-top: 1px solid var(--border); }
-    .saga:not(.collapsed) .saga-body { display: block; }
+    .saga:not(.collapsed) .saga-body { display: block; animation: fade .35s ease; }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
     /* ── ARC ROW ── */
     .arc { display: flex; align-items: center; gap: 14px; padding: 13px 18px; border-bottom: 1px solid var(--border); transition: background var(--transition); }
     .arc:last-child { border-bottom: none; }
+    .arc:hover { background: rgba(21,101,192,.05); }
     .arc.done { background: var(--done-bg); }
-    .arc-check { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--border); background: var(--surface); cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; transition: all var(--transition); }
-    .arc-check:hover { border-color: var(--primary); }
-    .arc.done .arc-check { background: var(--done); border-color: var(--done); }
+    .arc-check {
+      width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface-solid);
+      cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 15px; transition: all var(--transition);
+    }
+    .arc-check:hover { border-color: var(--primary); transform: scale(1.08); }
+    .arc.done .arc-check { background: var(--done); border-color: var(--done); animation: pop .35s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes pop { 0% { transform: scale(.4); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
     .arc-main { flex: 1; min-width: 0; }
-    .arc-name { font-weight: 650; font-size: .98rem; }
-    .arc-eps { font-size: .78rem; color: var(--text-3); }
-    .arc-progress { display: flex; align-items: center; gap: 9px; min-width: 200px; }
-    .arc-progress .bar { flex: 1; height: 7px; background: var(--bg); }
-    .arc-progress .bar > span { background: linear-gradient(90deg, var(--primary), #4a90d9); }
-    .arc.done .arc-progress .bar > span { background: var(--done); }
-    .arc-count { font-size: .78rem; color: var(--text-2); font-weight: 600; min-width: 58px; text-align: right; font-variant-numeric: tabular-nums; }
-    .stepper { display: flex; align-items: center; gap: 2px; }
-    .step-btn { width: 26px; height: 26px; border: 1.5px solid var(--border); background: var(--surface); border-radius: 7px; cursor: pointer; font-size: 15px; font-weight: 700; color: var(--text-2); line-height: 1; display: flex; align-items: center; justify-content: center; transition: all var(--transition); }
-    .step-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
-    .step-btn:disabled { opacity: .35; cursor: default; }
+    .arc-name { font-weight: 700; font-size: 1rem; }
+    .arc-eps { font-size: .78rem; color: var(--text-3); font-weight: 500; }
+    .arc-progress { display: flex; align-items: center; gap: 9px; min-width: 210px; }
+    .arc-progress .bar { flex: 1; height: 8px; background: rgba(120,150,190,.18); }
+    .arc-progress .bar > span { background: linear-gradient(90deg, var(--primary), #5aa6e6); }
+    .arc.done .arc-progress .bar > span { background: linear-gradient(90deg, var(--done), #57d39d); }
+    .arc-count { font-size: .78rem; color: var(--text-2); font-weight: 700; min-width: 58px; text-align: right; font-variant-numeric: tabular-nums; }
+    .stepper { display: flex; align-items: center; gap: 3px; }
+    .step-btn { width: 28px; height: 28px; border: 1.5px solid var(--border); background: var(--surface-solid); border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 800; color: var(--text-2); line-height: 1; display: flex; align-items: center; justify-content: center; transition: all var(--transition); }
+    .step-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); transform: translateY(-1px); }
+    .step-btn:disabled { opacity: .3; cursor: default; }
 
-    .loading, .errbox { text-align: center; padding: 60px 20px; color: var(--text-2); }
-    .errbox { color: #c0392b; }
+    .loading, .errbox { text-align: center; padding: 70px 20px; color: var(--surface-solid); font-weight: 600; font-size: 1.05rem; text-shadow: 0 1px 3px rgba(0,0,0,.25); }
+    .loading .spin { display: inline-block; animation: spin 1.6s linear infinite; font-size: 1.6rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .errbox { color: #ffd5d0; }
 
-    @media (max-width: 620px) {
+    @media (max-width: 640px) {
       .arc { flex-wrap: wrap; }
-      .arc-progress { min-width: 100%; order: 3; padding-left: 38px; }
+      .arc-progress { min-width: 100%; order: 3; padding-left: 40px; }
       .overall-current { margin-left: 0; }
+      .sun { width: 80px; height: 80px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::after { animation: none !important; transition: none !important; }
     }
   </style>
 </head>
 <body>
+  <!-- ocean scene -->
+  <div class="sky"></div>
+  <div class="sun"></div>
+  <div class="cloud c1"><svg width="170" height="60" viewBox="0 0 170 60"><path fill="currentColor" d="M30 50c-16 0-28-9-28-21S15 9 30 11C36 1 56-3 66 8c14-9 34-3 36 13 16-2 28 7 28 18s-12 11-28 11z"/></svg></div>
+  <div class="cloud c2"><svg width="170" height="60" viewBox="0 0 170 60"><path fill="currentColor" d="M30 50c-16 0-28-9-28-21S15 9 30 11C36 1 56-3 66 8c14-9 34-3 36 13 16-2 28 7 28 18s-12 11-28 11z"/></svg></div>
+  <div class="cloud c3"><svg width="170" height="60" viewBox="0 0 170 60"><path fill="currentColor" d="M30 50c-16 0-28-9-28-21S15 9 30 11C36 1 56-3 66 8c14-9 34-3 36 13 16-2 28 7 28 18s-12 11-28 11z"/></svg></div>
+  <div class="ghost-skull">☠️</div>
+  <div class="waves" aria-hidden="true">
+    <svg class="w1" viewBox="0 0 1200 130" preserveAspectRatio="none"><path fill="#bfeaf2" d="M0 50c150 40 300 40 450 10s300-50 450-20 250 40 300 30v60H0z"/></svg>
+    <svg class="w2" viewBox="0 0 1200 130" preserveAspectRatio="none"><path fill="#5fb3e0" d="M0 60c180 30 320-20 480-10s280 50 440 30 220-30 280-20v70H0z"/></svg>
+    <svg class="w3" viewBox="0 0 1200 130" preserveAspectRatio="none"><path fill="#1f7fd0" d="M0 70c200 20 340 30 520 0s260-30 420-10 200 30 260 20v60H0z"/></svg>
+  </div>
+  <canvas id="confetti-canvas"></canvas>
+
   <header class="app-header">
     <div class="header-top">
       <div class="brand">
         <span class="brand-icon">🏴‍☠️</span>
         <div>
-          <div class="brand-title">One Piece Tracker</div>
-          <div class="brand-sub">Your voyage through the Grand Line</div>
+          <div class="brand-title">One Piece <span class="accent">Tracker</span></div>
+          <div class="brand-sub">⚓ Your voyage through the Grand Line</div>
         </div>
       </div>
       <div class="header-right">
+        <button class="btn gold" id="music-btn" title="Play a sea shanty">🎵 Shanty</button>
         <button class="btn" id="expand-all">⤢ Expand all</button>
-        <button class="btn" id="reset-btn">↺ Reset progress</button>
+        <button class="btn" id="reset-btn">↺ Reset</button>
       </div>
     </div>
     <div class="overall">
@@ -110,7 +215,7 @@
   </header>
 
   <main class="wrap" id="content">
-    <div class="loading">Loading your log pose…</div>
+    <div class="loading"><span class="spin">🧭</span><br>Charting your course…</div>
   </main>
 
   <script>
@@ -132,6 +237,8 @@
     function sumWatched(arcs) { return arcs.reduce((n, a) => n + (a.watchedCount || 0), 0); }
     function sumTotal(arcs) { return arcs.reduce((n, a) => n + (a.epCount || 0), 0); }
     function pct(w, t) { return t ? Math.round((w / t) * 100) : 0; }
+    // Stable per-saga accent hue so each saga gets its own colour.
+    function hueFor(s) { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; }
 
     // First episode not yet watched, scanning arcs in canonical order.
     function currentEpisode() {
@@ -150,7 +257,7 @@
       const cur = currentEpisode();
       document.getElementById('ov-current').textContent = cur
         ? '⚓ Up next: Ep ' + cur.ep + ' · ' + cur.arc
-        : '🎉 All caught up — King of the Pirates!';
+        : '👑 All caught up — King of the Pirates!';
     }
 
     function arcRow(a) {
@@ -172,12 +279,14 @@
       </div>`;
     }
 
-    function sagaCard(saga) {
+    function sagaCard(saga, i) {
       const arcs = arcsOf(saga), w = sumWatched(arcs), t = sumTotal(arcs), p = pct(w, t);
       const collapsed = S.collapsed.has(saga), full = w >= t && t > 0;
-      return `<section class="saga ${collapsed ? 'collapsed' : ''}" data-saga="${esc(saga)}">
+      return `<section class="saga ${collapsed ? 'collapsed' : ''}" data-saga="${esc(saga)}"
+                style="--hue:${hueFor(saga)}; animation-delay:${i * 55}ms">
         <div class="saga-head" data-act="toggle-saga">
           <span class="saga-chevron">▼</span>
+          <span class="saga-badge">${full ? '🏆' : '🗺️'}</span>
           <span class="saga-name">${esc(saga)}</span>
           <div class="saga-progress ${full ? 'full' : ''}">
             <div class="bar"><span style="width:${p}%"></span></div>
@@ -202,9 +311,18 @@
       const clamped = Math.max(0, Math.min(arc.epCount, value));
       if (clamped === arc.watchedCount) return;
       const prev = arc.watchedCount;
+      const wasComplete = sumWatched(S.arcs) >= sumTotal(S.arcs);
+      const arcWasDone = prev >= arc.epCount;
       arc.watchedCount = clamped; // optimistic
       render();
-      try { const saved = await apiPut(id, { watchedCount: clamped }); Object.assign(arc, saved); }
+      try {
+        const saved = await apiPut(id, { watchedCount: clamped });
+        Object.assign(arc, saved);
+        // celebrate newly finishing an arc, or the whole series
+        const nowComplete = sumWatched(S.arcs) >= sumTotal(S.arcs);
+        if (nowComplete && !wasComplete) { confetti({ count: 320, spread: true }); fanfare(); }
+        else if (arc.watchedCount >= arc.epCount && !arcWasDone) { confetti({ count: 90 }); ding(); }
+      }
       catch { arc.watchedCount = prev; alert('Could not save — check the server.'); }
       render();
     }
@@ -242,10 +360,112 @@
       render();
     });
 
+    // ── Confetti (lightweight canvas burst) ─────────────────────────────────────────
+    const cvs = document.getElementById('confetti-canvas');
+    const ctx = cvs.getContext('2d');
+    const CONF_COLORS = ['#f0b429', '#1565c0', '#e74c3c', '#16a36b', '#ffd76b', '#ffffff'];
+    function confetti(opts = {}) {
+      const count = opts.count || 120;
+      cvs.width = innerWidth; cvs.height = innerHeight; cvs.style.display = 'block';
+      const parts = [];
+      for (let i = 0; i < count; i++) {
+        const fromTop = opts.spread;
+        parts.push({
+          x: fromTop ? Math.random() * innerWidth : innerWidth / 2 + (Math.random() - .5) * 240,
+          y: fromTop ? -20 - Math.random() * innerHeight * .3 : innerHeight * .32,
+          vx: (Math.random() - .5) * (fromTop ? 4 : 9),
+          vy: fromTop ? Math.random() * 3 + 2 : Math.random() * -9 - 4,
+          g: .18 + Math.random() * .14, size: 6 + Math.random() * 7,
+          color: CONF_COLORS[Math.random() * CONF_COLORS.length | 0],
+          rot: Math.random() * 6.28, vr: (Math.random() - .5) * .35, life: 0,
+        });
+      }
+      let frame = 0;
+      (function tick() {
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+        let alive = false;
+        for (const p of parts) {
+          p.vy += p.g; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life++;
+          if (p.y < cvs.height + 30) alive = true;
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+          ctx.globalAlpha = Math.max(0, 1 - p.life / 220); ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * .62); ctx.restore();
+        }
+        if (alive && ++frame < 260) requestAnimationFrame(tick);
+        else { ctx.clearRect(0, 0, cvs.width, cvs.height); cvs.style.display = 'none'; }
+      })();
+    }
+
+    // ── Audio: generated sea-shanty + little sound effects (Web Audio) ───────────────
+    let actx, master, musicOn = false, loopTimer = null;
+    function ensureAudio() {
+      if (!actx) {
+        actx = new (window.AudioContext || window.webkitAudioContext)();
+        master = actx.createGain(); master.gain.value = 0; master.connect(actx.destination);
+      }
+      if (actx.state === 'suspended') actx.resume();
+    }
+    function tone(freq, t, dur, type = 'triangle', vol = .2, dest) {
+      if (!freq) return;
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(vol, t + .02);
+      g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+      o.connect(g).connect(dest || master); o.start(t); o.stop(t + dur + .05);
+    }
+    // original cheerful waltz-y shanty (note, beats)
+    const N = { D4: 293.66, E4: 329.63, F4: 369.99, G4: 392.0, A4: 440, B4: 493.88, C5: 554.37, D5: 587.33, E5: 659.25, Fs5: 739.99, G5: 783.99, 0: 0 };
+    const MELODY = [
+      ['D4', 1], ['F4', .5], ['A4', .5], ['D5', 1],
+      ['C5', 1], ['A4', 1], ['F4', 1],
+      ['G4', 1], ['B4', .5], ['D5', .5], ['G5', 1],
+      ['Fs5', 1], ['D5', 1], ['A4', 1],
+      ['B4', 1], ['D5', .5], ['B4', .5], ['G4', 1],
+      ['A4', 1], ['F4', 1], ['D4', 1],
+      ['E4', 1], ['G4', .5], ['B4', .5], ['E5', 1],
+      ['D5', 2], [0, 1],
+    ];
+    const BASS = [146.83, 110, 98, 146.83, 98, 146.83, 110, 146.83]; // one root per bar (3 beats)
+    const BEAT = 60 / 116;
+    function scheduleLoop(start) {
+      let t = start;
+      for (const [n, b] of MELODY) { const d = b * BEAT; tone(N[n], t, d * .92, 'triangle', .16); t += d; }
+      // bass: 8 bars × 3 beats
+      let bt = start;
+      for (let bar = 0; bar < BASS.length; bar++) { tone(BASS[bar], bt, BEAT * 3 * .96, 'sine', .22); bt += BEAT * 3; }
+      return t;
+    }
+    function startMusic() {
+      ensureAudio();
+      master.gain.cancelScheduledValues(actx.currentTime);
+      master.gain.linearRampToValueAtTime(.5, actx.currentTime + .6);
+      let next = actx.currentTime + .15;
+      (function loop() { next = scheduleLoop(next); loopTimer = setTimeout(loop, (next - actx.currentTime - .25) * 1000); })();
+    }
+    function stopMusic() {
+      if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
+      if (master) master.gain.linearRampToValueAtTime(0, actx.currentTime + .35);
+    }
+    document.getElementById('music-btn').addEventListener('click', (e) => {
+      musicOn = !musicOn;
+      if (musicOn) { startMusic(); e.currentTarget.classList.add('playing'); e.currentTarget.textContent = '🎶 Playing'; }
+      else { stopMusic(); e.currentTarget.classList.remove('playing'); e.currentTarget.textContent = '🎵 Shanty'; }
+    });
+    // short SFX (work even when music is off)
+    function sfx(seq, type = 'square', vol = .18) {
+      ensureAudio();
+      const tmp = actx.createGain(); tmp.gain.value = 1; tmp.connect(actx.destination);
+      let t = actx.currentTime + .01;
+      for (const [f, d] of seq) { tone(f, t, d, type, vol, tmp); t += d; }
+    }
+    function ding() { sfx([[523.25, .1], [659.25, .1], [783.99, .18]], 'triangle', .2); }
+    function fanfare() { sfx([[523.25, .14], [659.25, .14], [783.99, .14], [1046.5, .3]], 'sawtooth', .16); }
+
     // ── Boot ──────────────────────────────────────────────────────────────────────
     (async () => {
       try { S.arcs = await apiGet(); render(); }
-      catch { document.getElementById('content').innerHTML = '<div class="errbox">Failed to load tracker data.</div>'; }
+      catch { document.getElementById('content').innerHTML = '<div class="errbox">🌊 Failed to load tracker data. Check the server and try again.</div>'; }
     })();
   </script>
 </body>
