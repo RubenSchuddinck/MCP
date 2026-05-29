@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recipes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f6f1eb;
+      --surface: #ffffff;
+      --border: #e4ddd4;
+      --text: #1c1917;
+      --text-2: #57534e;
+      --text-3: #a8a29e;
+      --primary: #c2410c;
+      --primary-h: #b83b0b;
+      --primary-bg: #fff7ed;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.10), 0 1px 3px rgba(0,0,0,.06);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.08);
+      --header-h: 68px;
+      --transition: 0.18s ease;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* ─── HEADER ─────────────────────────────────────── */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      height: var(--header-h);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      text-decoration: none;
+      color: inherit;
+    }
+    .brand-icon { font-size: 1.6rem; line-height: 1; }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -.02em;
+    }
+
+    .search-wrap {
+      flex: 1;
+      max-width: 420px;
+      position: relative;
+    }
+    .search-wrap svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-3);
+      pointer-events: none;
+    }
+    #search {
+      width: 100%;
+      height: 40px;
+      padding: 0 14px 0 40px;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 14px;
+      outline: none;
+      background: var(--bg);
+      color: var(--text);
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    #search:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(194,65,12,.12);
+    }
+    #search::placeholder { color: var(--text-3); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 38px;
+      padding: 0 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text-2);
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+    .btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .btn svg { flex-shrink: 0; }
+
+    .view-toggle {
+      display: flex;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .view-toggle .btn {
+      border: none;
+      border-radius: 0;
+      height: 36px;
+    }
+    .view-toggle .btn + .btn { border-left: 1.5px solid var(--border); }
+    .view-toggle .btn.active { background: var(--primary); color: #fff; }
+    .view-toggle .btn:hover:not(.active) { background: var(--bg); }
+
+    /* ─── FILTER PANEL ─────────────────────────────── */
+    .filter-panel {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+    .filter-panel.open { max-height: 320px; }
+
+    .filter-inner {
+      display: flex;
+      gap: 32px;
+      padding: 20px 24px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .filter-section { min-width: 180px; flex: 1; }
+    .filter-section h3 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-3);
+      margin-bottom: 10px;
+    }
+
+    .tag-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-height: 130px;
+      overflow-y: auto;
+    }
+    .tag-cloud::-webkit-scrollbar { width: 4px; }
+    .tag-cloud::-webkit-scrollbar-track { background: transparent; }
+    .tag-cloud::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .filter-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1.5px solid;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      user-select: none;
+    }
+    .filter-tag.selected { color: #fff; }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .slider-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      min-width: 70px;
+      text-align: right;
+    }
+    input[type=range] {
+      flex: 1;
+      appearance: none;
+      height: 4px;
+      background: var(--border);
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,.2);
+    }
+
+    .filter-actions {
+      display: flex;
+      align-items: flex-end;
+      padding-bottom: 2px;
+    }
+
+    /* ─── SUBBAR (active filters + meta) ───────────── */
+    .subbar {
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      min-height: 44px;
+    }
+
+    .active-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .active-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--primary-bg);
+      color: var(--primary);
+      border: 1px solid rgba(194,65,12,.2);
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .active-chip:hover { background: #fde8d0; }
+    .active-chip .chip-x { opacity: .6; font-size: 14px; line-height: 1; }
+
+    .results-count {
+      font-size: 12.5px;
+      color: var(--text-3);
+      flex-shrink: 0;
+    }
+
+    /* ─── MAIN CONTENT AREA ─────────────────────────── */
+    .content {
+      padding: 20px 24px 40px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ─── CARD GRID ──────────────────────────────────── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .recipe-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      cursor: pointer;
+      border: 1.5px solid var(--border);
+      transition: transform var(--transition), box-shadow var(--transition);
+      display: flex;
+      flex-direction: column;
+    }
+    .recipe-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .card-hero {
+      height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.5rem;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .card-hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,.08));
+    }
+
+    .card-body {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text);
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .tag-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity var(--transition);
+      white-space: nowrap;
+    }
+    .tag-pill:hover { opacity: .8; }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .card-score {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #78350f;
+    }
+
+    .stars { display: inline-flex; gap: 1px; }
+    .star { font-size: 12px; }
+    .star-full { color: #f59e0b; }
+    .star-half { color: #fbbf24; }
+    .star-empty { color: #d1d5db; }
+
+    .card-time {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text-2);
+      font-weight: 500;
+    }
+
+    .difficulty-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 8px;
+    }
+    .diff-easy { background: #dcfce7; color: #15803d; }
+    .diff-medium { background: #fef3c7; color: #b45309; }
+    .diff-hard { background: #fee2e2; color: #dc2626; }
+
+    /* ─── TABLE VIEW ─────────────────────────────────── */
+    .table-wrap {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .recipes-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    .recipes-table th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--text-3);
+      background: var(--bg);
+      border-bottom: 1.5px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      transition: color var(--transition);
+    }
+    .recipes-table th:hover { color: var(--primary); }
+    .recipes-table th.sorted { color: var(--primary); }
+    .sort-indicator { margin-left: 4px; opacity: .5; }
+    .sort-indicator.active { opacity: 1; }
+
+    .recipes-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .recipes-table tr:last-child td { border-bottom: none; }
+    .recipes-table tbody tr {
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .recipes-table tbody tr:hover { background: var(--primary-bg); }
+
+    .table-name { font-weight: 600; color: var(--text); }
+    .table-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .table-time { color: var(--text-2); white-space: nowrap; }
+
+    /* ─── EMPTY STATE ────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-2);
+    }
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 1.1rem; margin-bottom: 8px; color: var(--text); }
+    .empty-state p { font-size: 14px; }
+
+    /* ─── MODAL ──────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(28, 25, 23, 0.55);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal-box {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 800px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modal-in 0.2s ease;
+    }
+    @keyframes modal-in {
+      from { opacity: 0; transform: translateY(16px) scale(.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 24px 24px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .modal-hero-icon {
+      font-size: 2.8rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .modal-header-info { flex: 1; min-width: 0; }
+    .modal-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -.02em;
+      margin-bottom: 8px;
+    }
+    .modal-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+    .modal-close {
+      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-2);
+      font-size: 16px;
+      transition: all var(--transition);
+    }
+    .modal-close:hover { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+
+    .modal-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+      color: var(--text-2);
+    }
+    .meta-item strong { color: var(--text); font-weight: 600; }
+    .meta-icon { font-size: 14px; }
+
+    .modal-body {
+      overflow-y: auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: 28px;
+    }
+    .modal-body::-webkit-scrollbar { width: 6px; }
+    .modal-body::-webkit-scrollbar-track { background: transparent; }
+    .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .modal-section h3 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-3);
+      margin-bottom: 14px;
+    }
+
+    .ingredients-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .ingredients-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .ingredients-list li::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+
+    .steps-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      counter-reset: steps;
+    }
+    .steps-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 14px;
+      line-height: 1.55;
+      counter-increment: steps;
+    }
+    .step-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-text { flex: 1; }
+
+    /* ─── RESPONSIVE ─────────────────────────────────── */
+    @media (max-width: 700px) {
+      .brand-title { display: none; }
+      .header-right .btn:not(.btn-filter):not(.view-toggle *) { display: none; }
+      .filter-inner { gap: 16px; }
+      .modal-body { grid-template-columns: 1fr; }
+      .content { padding: 16px; }
+      .cards-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    }
+    @media (max-width: 480px) {
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <a class="brand" href="#">
+    <span class="brand-icon">🍳</span>
+    <span class="brand-title">Recipes</span>
+  </a>
+
+  <div class="search-wrap">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="search" id="search" placeholder="Search by name, description, or tag…" autocomplete="off" />
+  </div>
+
+  <div class="header-right">
+    <button class="btn btn-filter" id="btn-filters">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+      </svg>
+      Filters
+    </button>
+    <div class="view-toggle">
+      <button class="btn" id="view-cards" title="Card view">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/>
+          <rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>
+        </svg>
+      </button>
+      <button class="btn" id="view-table" title="Table view">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Filter panel -->
+<div class="filter-panel" id="filter-panel">
+  <div class="filter-inner">
+    <div class="filter-section" style="flex: 2; min-width: 240px;">
+      <h3>Tags</h3>
+      <div class="tag-cloud" id="tag-cloud"></div>
+    </div>
+    <div class="filter-section">
+      <h3>Min. Score</h3>
+      <div class="slider-row">
+        <input type="range" id="score-slider" min="0" max="5" step="0.5" value="0" />
+        <span class="slider-label" id="score-label">Any</span>
+      </div>
+      <div class="slider-row">
+        <input type="range" id="score-max-slider" min="0" max="5" step="0.5" value="5" />
+        <span class="slider-label" id="score-max-label">Max: 5★</span>
+      </div>
+    </div>
+    <div class="filter-section">
+      <h3>Max. Total Time</h3>
+      <div class="slider-row">
+        <input type="range" id="time-slider" min="10" max="480" step="5" value="480" />
+        <span class="slider-label" id="time-label">Any</span>
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button class="btn" id="btn-clear">Clear all</button>
+    </div>
+  </div>
+</div>
+
+<!-- Active filters + count -->
+<div class="subbar">
+  <div class="active-filters" id="active-filters"></div>
+  <span class="results-count" id="results-count"></span>
+</div>
+
+<!-- Main content -->
+<div class="content">
+  <div id="content-area"></div>
+</div>
+
+<!-- Recipe modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box" id="modal-box">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<script>
+  // ── Constants ─────────────────────────────────────────────
+  const TAG_COLORS = {
+    Italian:'#ef4444', Pasta:'#fb923c', French:'#60a5fa',
+    Asian:'#f97316', Mexican:'#eab308', American:'#22c55e',
+    Vegetarian:'#16a34a', Vegan:'#059669', Healthy:'#10b981',
+    Quick:'#3b82f6', Slow:'#8b5cf6',
+    Breakfast:'#f59e0b', Lunch:'#06b6d4', Dinner:'#6366f1',
+    Dessert:'#ec4899', Baking:'#a78bfa',
+    Soup:'#14b8a6', Salad:'#84cc16',
+    Seafood:'#0ea5e9', Chicken:'#d97706', Beef:'#dc2626', Pork:'#f87171',
+    Spicy:'#ff4500', Sweet:'#e879f9',
+  };
+
+  const TAG_EMOJI = {
+    Italian:'🍝', Pasta:'🍝', French:'🥐', Asian:'🍜',
+    Mexican:'🌮', American:'🍔', Vegetarian:'🥗', Vegan:'🌱',
+    Breakfast:'🍳', Lunch:'🥙', Dinner:'🍽️', Dessert:'🍰',
+    Baking:'🧁', Soup:'🍲', Salad:'🥗', Seafood:'🦐',
+    Chicken:'🍗', Beef:'🥩', Pork:'🥓', Healthy:'🌿',
+  };
+
+  const NON_FOOD_TAGS = new Set(['Quick','Slow','Healthy','Vegan','Vegetarian','Dinner','Lunch','Breakfast']);
+
+  function tagColor(t) { return TAG_COLORS[t] || '#9ca3af'; }
+
+  function recipeEmoji(tags) {
+    for (const t of tags) {
+      if (TAG_EMOJI[t] && !NON_FOOD_TAGS.has(t)) return TAG_EMOJI[t];
+    }
+    for (const t of tags) {
+      if (TAG_EMOJI[t]) return TAG_EMOJI[t];
+    }
+    return '🍴';
+  }
+
+  function heroGradient(tags) {
+    const c = tagColor(tags[0]);
+    return `linear-gradient(135deg, ${c}55 0%, ${c}22 100%)`;
+  }
+
+  function formatTime(m) {
+    if (!m || m === 0) return '—';
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60), min = m % 60;
+    return min ? `${h}h ${min}m` : `${h}h`;
+  }
+
+  function starsHtml(score) {
+    let h = '';
+    for (let i = 1; i <= 5; i++) {
+      if (i <= Math.floor(score)) h += '<span class="star star-full">★</span>';
+      else if (i === Math.ceil(score) && score % 1 >= 0.5) h += '<span class="star star-half">★</span>';
+      else h += '<span class="star star-empty">★</span>';
+    }
+    return `<span class="stars">${h}</span>`;
+  }
+
+  function diffClass(d) {
+    return { Easy: 'diff-easy', Medium: 'diff-medium', Hard: 'diff-hard' }[d] || 'diff-easy';
+  }
+
+  function tagPill(t, clickable = true) {
+    const c = tagColor(t);
+    const style = `background:${c}1a; color:${c}; border-color:${c}40;`;
+    return `<span class="tag-pill" style="${style}" ${clickable ? `data-quick-tag="${t}"` : ''}>${t}</span>`;
+  }
+
+  // ── State ─────────────────────────────────────────────────
+  const state = {
+    recipes: [],
+    filtered: [],
+    view: 'cards',       // 'cards' | 'table'
+    panelOpen: false,
+    search: '',
+    selectedTags: new Set(),
+    minScore: 0,
+    maxScore: 5,
+    maxTime: 480,
+    sortBy: 'name',
+    sortDir: 1,
+    allTags: [],
+  };
+
+  // ── Filter & Sort ─────────────────────────────────────────
+  function applyFilters() {
+    const q = state.search.toLowerCase();
+    let r = state.recipes.filter(rec => {
+      if (q && !rec.name.toLowerCase().includes(q) &&
+               !rec.description.toLowerCase().includes(q) &&
+               !rec.tags.some(t => t.toLowerCase().includes(q))) return false;
+      if (state.selectedTags.size && !rec.tags.some(t => state.selectedTags.has(t))) return false;
+      if (rec.score < state.minScore) return false;
+      if (rec.score > state.maxScore) return false;
+      if (rec.totalTime > state.maxTime) return false;
+      return true;
+    });
+
+    if (state.view === 'table') {
+      r = [...r].sort((a, b) => {
+        let va = a[state.sortBy], vb = b[state.sortBy];
+        if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+        return (va < vb ? -1 : va > vb ? 1 : 0) * state.sortDir;
+      });
+    }
+    state.filtered = r;
+    renderContent();
+    renderActiveFilters();
+    renderCount();
+  }
+
+  // ── Render: Cards ─────────────────────────────────────────
+  function renderCards() {
+    if (!state.filtered.length) return emptyState();
+    return `<div class="cards-grid">${state.filtered.map(cardHtml).join('')}</div>`;
+  }
+
+  function cardHtml(r) {
+    return `
+      <div class="recipe-card" data-id="${r.id}">
+        <div class="card-hero" style="background:${heroGradient(r.tags)}">
+          ${recipeEmoji(r.tags)}
+        </div>
+        <div class="card-body">
+          <div class="card-title">${r.name}</div>
+          <div class="card-desc">${r.description}</div>
+          <div class="card-tags">${r.tags.map(t => tagPill(t)).join('')}</div>
+        </div>
+        <div class="card-footer">
+          <div class="card-score">${starsHtml(r.score)} ${r.score.toFixed(1)}</div>
+          <div class="card-time">⏱ ${formatTime(r.totalTime)}</div>
+          <span class="difficulty-badge ${diffClass(r.difficulty)}">${r.difficulty}</span>
+        </div>
+      </div>`;
+  }
+
+  // ── Render: Table ─────────────────────────────────────────
+  function renderTable() {
+    if (!state.filtered.length) return emptyState();
+    const cols = [
+      { key:'name', label:'Recipe' },
+      { key:'tags', label:'Tags', nosort:true },
+      { key:'score', label:'Score' },
+      { key:'prepTime', label:'Prep' },
+      { key:'cookTime', label:'Cook' },
+      { key:'totalTime', label:'Total' },
+      { key:'difficulty', label:'Difficulty' },
+    ];
+    const ths = cols.map(c => {
+      if (c.nosort) return `<th>${c.label}</th>`;
+      const active = state.sortBy === c.key;
+      const dir = active ? (state.sortDir === 1 ? '↑' : '↓') : '↕';
+      return `<th class="${active?'sorted':''}" data-sort="${c.key}">
+        ${c.label} <span class="sort-indicator ${active?'active':''}">${dir}</span>
+      </th>`;
+    }).join('');
+
+    const rows = state.filtered.map(r => `
+      <tr data-id="${r.id}">
+        <td class="table-name">${r.name}</td>
+        <td><div class="table-tags">${r.tags.map(t => tagPill(t)).join('')}</div></td>
+        <td>${starsHtml(r.score)} <strong>${r.score.toFixed(1)}</strong></td>
+        <td class="table-time">${formatTime(r.prepTime)}</td>
+        <td class="table-time">${formatTime(r.cookTime)}</td>
+        <td class="table-time">${formatTime(r.totalTime)}</td>
+        <td><span class="difficulty-badge ${diffClass(r.difficulty)}">${r.difficulty}</span></td>
+      </tr>`).join('');
+
+    return `<div class="table-wrap">
+      <table class="recipes-table">
+        <thead><tr>${ths}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }
+
+  function emptyState() {
+    return `<div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <h3>No recipes found</h3>
+      <p>Try adjusting your filters or search term.</p>
+    </div>`;
+  }
+
+  // ── Render: Filter tag cloud ──────────────────────────────
+  function renderTagCloud() {
+    const cloud = document.getElementById('tag-cloud');
+    cloud.innerHTML = state.allTags.map(t => {
+      const c = tagColor(t);
+      const sel = state.selectedTags.has(t);
+      const style = sel
+        ? `background:${c}; color:#fff; border-color:${c};`
+        : `background:${c}1a; color:${c}; border-color:${c}55;`;
+      return `<span class="filter-tag ${sel?'selected':''}" style="${style}" data-tag="${t}">${t}</span>`;
+    }).join('');
+  }
+
+  // ── Render: Active filter chips ───────────────────────────
+  function renderActiveFilters() {
+    const chips = [];
+    state.selectedTags.forEach(t => {
+      chips.push(`<span class="active-chip" data-remove-tag="${t}">${t} <span class="chip-x">×</span></span>`);
+    });
+    if (state.minScore > 0)
+      chips.push(`<span class="active-chip" data-remove="minScore">★ ${state.minScore.toFixed(1)}+ <span class="chip-x">×</span></span>`);
+    if (state.maxScore < 5)
+      chips.push(`<span class="active-chip" data-remove="maxScore">★ ≤${state.maxScore.toFixed(1)} <span class="chip-x">×</span></span>`);
+    if (state.maxTime < 480)
+      chips.push(`<span class="active-chip" data-remove="maxTime">⏱ ≤${formatTime(state.maxTime)} <span class="chip-x">×</span></span>`);
+    if (state.search)
+      chips.push(`<span class="active-chip" data-remove="search">"${state.search}" <span class="chip-x">×</span></span>`);
+    document.getElementById('active-filters').innerHTML = chips.join('');
+  }
+
+  function renderCount() {
+    const total = state.recipes.length;
+    const shown = state.filtered.length;
+    document.getElementById('results-count').textContent =
+      shown === total ? `${total} recipes` : `${shown} of ${total} recipes`;
+  }
+
+  function renderContent() {
+    document.getElementById('content-area').innerHTML =
+      state.view === 'cards' ? renderCards() : renderTable();
+  }
+
+  // ── Modal ─────────────────────────────────────────────────
+  function openModal(id) {
+    const r = state.recipes.find(x => x.id === id);
+    if (!r) return;
+    const box = document.getElementById('modal-box');
+    box.innerHTML = `
+      <div class="modal-header">
+        <div class="modal-hero-icon">${recipeEmoji(r.tags)}</div>
+        <div class="modal-header-info">
+          <div class="modal-title">${r.name}</div>
+          <div class="modal-tags">${r.tags.map(t => tagPill(t, false)).join('')}</div>
+          <div class="modal-meta">
+            <span class="meta-item"><span class="meta-icon">⭐</span> <strong>${r.score.toFixed(1)}</strong> / 5</span>
+            <span class="meta-item"><span class="meta-icon">⏱</span> <strong>${formatTime(r.totalTime)}</strong> total</span>
+            <span class="meta-item"><span class="meta-icon">🔪</span> <strong>${formatTime(r.prepTime)}</strong> prep</span>
+            <span class="meta-item"><span class="meta-icon">🔥</span> <strong>${formatTime(r.cookTime)}</strong> cook</span>
+            <span class="meta-item"><span class="meta-icon">👤</span> <strong>${r.servings}</strong> servings</span>
+            <span class="meta-item"><span class="difficulty-badge ${diffClass(r.difficulty)}">${r.difficulty}</span></span>
+          </div>
+        </div>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-section">
+          <h3>Ingredients</h3>
+          <ul class="ingredients-list">
+            ${r.ingredients.map(i => `<li>${i}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="modal-section">
+          <h3>Method</h3>
+          <ol class="steps-list">
+            ${r.steps.map((s, i) => `<li><span class="step-num">${i+1}</span><span class="step-text">${s}</span></li>`).join('')}
+          </ol>
+        </div>
+      </div>`;
+    document.getElementById('modal-overlay').classList.add('open');
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  // ── Events ────────────────────────────────────────────────
+  function setupEvents() {
+    // Search
+    let searchTimer;
+    document.getElementById('search').addEventListener('input', e => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        state.search = e.target.value.trim();
+        applyFilters();
+      }, 180);
+    });
+
+    // View toggle
+    document.getElementById('view-cards').addEventListener('click', () => {
+      state.view = 'cards';
+      document.getElementById('view-cards').classList.add('active');
+      document.getElementById('view-table').classList.remove('active');
+      applyFilters();
+    });
+    document.getElementById('view-table').addEventListener('click', () => {
+      state.view = 'table';
+      document.getElementById('view-table').classList.add('active');
+      document.getElementById('view-cards').classList.remove('active');
+      applyFilters();
+    });
+
+    // Filter panel toggle
+    document.getElementById('btn-filters').addEventListener('click', () => {
+      state.panelOpen = !state.panelOpen;
+      document.getElementById('filter-panel').classList.toggle('open', state.panelOpen);
+      document.getElementById('btn-filters').classList.toggle('active', state.panelOpen);
+    });
+
+    // Score slider
+    document.getElementById('score-slider').addEventListener('input', e => {
+      state.minScore = parseFloat(e.target.value);
+      document.getElementById('score-label').textContent =
+        state.minScore > 0 ? `Min: ${state.minScore.toFixed(1)}★` : 'Any';
+      applyFilters();
+    });
+    document.getElementById('score-max-slider').addEventListener('input', e => {
+      state.maxScore = parseFloat(e.target.value);
+      document.getElementById('score-max-label').textContent =
+        state.maxScore < 5 ? `Max: ${state.maxScore.toFixed(1)}★` : 'Max: 5★';
+      applyFilters();
+    });
+
+    // Time slider
+    document.getElementById('time-slider').addEventListener('input', e => {
+      state.maxTime = parseInt(e.target.value);
+      document.getElementById('time-label').textContent =
+        state.maxTime >= 480 ? 'Any' : `≤ ${formatTime(state.maxTime)}`;
+      applyFilters();
+    });
+
+    // Clear all filters
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      state.selectedTags.clear();
+      state.minScore = 0; state.maxScore = 5; state.maxTime = 480; state.search = '';
+      document.getElementById('search').value = '';
+      document.getElementById('score-slider').value = 0;
+      document.getElementById('score-label').textContent = 'Any';
+      document.getElementById('score-max-slider').value = 5;
+      document.getElementById('score-max-label').textContent = 'Max: 5★';
+      document.getElementById('time-slider').value = 480;
+      document.getElementById('time-label').textContent = 'Any';
+      renderTagCloud();
+      applyFilters();
+    });
+
+    // Tag cloud (filter panel)
+    document.getElementById('tag-cloud').addEventListener('click', e => {
+      const tag = e.target.dataset.tag;
+      if (!tag) return;
+      if (state.selectedTags.has(tag)) state.selectedTags.delete(tag);
+      else state.selectedTags.add(tag);
+      renderTagCloud();
+      applyFilters();
+    });
+
+    // Active filter chip removal
+    document.getElementById('active-filters').addEventListener('click', e => {
+      const chip = e.target.closest('[data-remove-tag],[data-remove]');
+      if (!chip) return;
+      if (chip.dataset.removeTag) {
+        state.selectedTags.delete(chip.dataset.removeTag);
+        renderTagCloud();
+      } else {
+        const k = chip.dataset.remove;
+        if (k === 'minScore') { state.minScore = 0; document.getElementById('score-slider').value = 0; document.getElementById('score-label').textContent = 'Any'; }
+        if (k === 'maxScore') { state.maxScore = 5; document.getElementById('score-max-slider').value = 5; document.getElementById('score-max-label').textContent = 'Max: 5★'; }
+        if (k === 'maxTime') { state.maxTime = 480; document.getElementById('time-slider').value = 480; document.getElementById('time-label').textContent = 'Any'; }
+        if (k === 'search') { state.search = ''; document.getElementById('search').value = ''; }
+      }
+      applyFilters();
+    });
+
+    // Card / table row click → modal
+    document.getElementById('content-area').addEventListener('click', e => {
+      const tag = e.target.dataset.quickTag;
+      if (tag) {
+        e.stopPropagation();
+        if (state.selectedTags.has(tag)) state.selectedTags.delete(tag);
+        else state.selectedTags.add(tag);
+        if (!state.panelOpen) {
+          state.panelOpen = true;
+          document.getElementById('filter-panel').classList.add('open');
+          document.getElementById('btn-filters').classList.add('active');
+        }
+        renderTagCloud();
+        applyFilters();
+        return;
+      }
+      const card = e.target.closest('[data-id]');
+      if (card) openModal(card.dataset.id);
+    });
+
+    // Table header sort
+    document.getElementById('content-area').addEventListener('click', e => {
+      const th = e.target.closest('[data-sort]');
+      if (!th) return;
+      if (state.sortBy === th.dataset.sort) state.sortDir *= -1;
+      else { state.sortBy = th.dataset.sort; state.sortDir = 1; }
+      applyFilters();
+    });
+
+    // Modal close on backdrop
+    document.getElementById('modal-overlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('modal-overlay')) closeModal();
+    });
+
+    // Esc to close modal
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
+  }
+
+  // ── Init ──────────────────────────────────────────────────
+  async function init() {
+    try {
+      const res = await fetch('/data/recipes.json');
+      const data = await res.json();
+      state.recipes = data.recipes;
+
+      const tagSet = new Set();
+      state.recipes.forEach(r => r.tags.forEach(t => tagSet.add(t)));
+      state.allTags = [...tagSet].sort();
+
+      document.getElementById('view-cards').classList.add('active');
+      renderTagCloud();
+      setupEvents();
+      applyFilters();
+    } catch (err) {
+      document.getElementById('content-area').innerHTML =
+        `<div class="empty-state"><div class="empty-icon">⚠️</div><h3>Could not load recipes</h3><p>${err.message}</p></div>`;
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
