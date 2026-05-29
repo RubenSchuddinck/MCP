@@ -29,12 +29,15 @@ function readBody(req) {
   });
 }
 
+// recipes.json is stored as { "recipes": [...] }. Read returns the bare
+// array; write wraps it back up so the on-disk shape stays consistent.
 async function readDB() {
-  return JSON.parse(await readFile(DB, "utf8"));
+  const parsed = JSON.parse(await readFile(DB, "utf8"));
+  return Array.isArray(parsed) ? parsed : (parsed.recipes ?? []);
 }
 
-async function writeDB(data) {
-  await writeFile(DB, JSON.stringify(data, null, 2));
+async function writeDB(recipes) {
+  await writeFile(DB, JSON.stringify({ recipes }, null, 2));
 }
 
 function resolveFile(pathname) {
