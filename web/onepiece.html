@@ -115,7 +115,9 @@
 
   <script>
     // ── API ───────────────────────────────────────────────────────────────────────
-    const BASE = window.location.pathname.replace(/\/(onepiece|index\.html)?\/?$/, '') + '/';
+    // Keep the Caddy path prefix (e.g. /onepiece) intact — only strip a
+    // trailing index.html and/or slash so API calls stay under the prefix.
+    const BASE = window.location.pathname.replace(/index\.html$/, '').replace(/\/+$/, '') + '/';
     async function apiGet() { const r = await fetch(BASE + 'api/onepiece'); if (!r.ok) throw new Error('API error'); return r.json(); }
     async function apiPut(id, arc) { const r = await fetch(BASE + 'api/onepiece/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(arc) }); if (!r.ok) throw new Error('Save failed'); return r.json(); }
     async function apiReset() { const r = await fetch(BASE + 'api/onepiece/reset', { method: 'POST' }); if (!r.ok) throw new Error('Reset failed'); return r.json(); }
