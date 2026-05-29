@@ -2,10 +2,597 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="refresh" content="0; url=cooking" />
-  <title>Redirecting…</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recipes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f6f1eb; --surface: #ffffff; --border: #e4ddd4;
+      --text: #1c1917; --text-2: #57534e; --text-3: #a8a29e;
+      --primary: #c2410c; --primary-bg: #fff7ed;
+      --radius: 14px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.10), 0 1px 3px rgba(0,0,0,.06);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.08);
+      --transition: 0.18s ease;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.5; }
+
+    /* ── HEADER ── */
+    .app-header { position: sticky; top: 0; z-index: 100; background: var(--surface); border-bottom: 1px solid var(--border); height: 68px; display: flex; align-items: center; gap: 12px; padding: 0 20px; box-shadow: var(--shadow); }
+    .brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; color: inherit; }
+    .brand-icon { font-size: 1.6rem; line-height: 1; }
+    .brand-title { font-size: 1.15rem; font-weight: 700; color: var(--primary); letter-spacing: -.02em; }
+    .search-wrap { flex: 1; max-width: 400px; position: relative; }
+    .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+    #search { width: 100%; height: 40px; padding: 0 14px 0 40px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 14px; outline: none; background: var(--bg); color: var(--text); transition: border-color var(--transition), box-shadow var(--transition); }
+    #search:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(194,65,12,.12); }
+    #search::placeholder { color: var(--text-3); }
+    .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text-2); font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all var(--transition); white-space: nowrap; }
+    .btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-bg); }
+    .btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .btn-new { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .btn-new:hover { background: #b83b0b; border-color: #b83b0b; color: #fff; }
+    .view-toggle { display: flex; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .view-toggle .btn { border: none; border-radius: 0; height: 36px; }
+    .view-toggle .btn + .btn { border-left: 1.5px solid var(--border); }
+    .view-toggle .btn.active { background: var(--primary); color: #fff; }
+    .view-toggle .btn:hover:not(.active) { background: var(--bg); }
+
+    /* ── FILTER PANEL ── */
+    .filter-panel { background: var(--surface); border-bottom: 1px solid var(--border); overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
+    .filter-panel.open { max-height: 320px; }
+    .filter-inner { display: flex; gap: 32px; padding: 20px 24px; align-items: flex-start; flex-wrap: wrap; }
+    .filter-section { min-width: 180px; flex: 1; }
+    .filter-section h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); margin-bottom: 10px; }
+    .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; max-height: 130px; overflow-y: auto; }
+    .tag-cloud::-webkit-scrollbar { width: 4px; }
+    .tag-cloud::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .filter-tag { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; border: 1.5px solid; font-size: 12px; font-weight: 500; cursor: pointer; transition: all var(--transition); user-select: none; }
+    .filter-tag.selected { color: #fff; }
+    .slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .slider-label { font-size: 13px; font-weight: 600; color: var(--primary); min-width: 70px; text-align: right; }
+    input[type=range] { flex: 1; appearance: none; height: 4px; background: var(--border); border-radius: 4px; outline: none; cursor: pointer; }
+    input[type=range]::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+    .filter-actions { display: flex; align-items: flex-end; padding-bottom: 2px; }
+
+    /* ── SUBBAR ── */
+    .subbar { padding: 10px 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 44px; }
+    .active-filters { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+    .active-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; background: var(--primary-bg); color: var(--primary); border: 1px solid rgba(194,65,12,.2); cursor: pointer; transition: background var(--transition); }
+    .active-chip:hover { background: #fde8d0; }
+    .active-chip .chip-x { opacity: .6; font-size: 14px; line-height: 1; }
+    .results-count { font-size: 12.5px; color: var(--text-3); flex-shrink: 0; }
+
+    /* ── CONTENT ── */
+    .content { padding: 20px 24px 40px; max-width: 1400px; margin: 0 auto; }
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+    .recipe-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; cursor: pointer; border: 1.5px solid var(--border); transition: transform var(--transition), box-shadow var(--transition); display: flex; flex-direction: column; }
+    .recipe-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .card-hero { height: 140px; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; position: relative; flex-shrink: 0; }
+    .card-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,.08)); }
+    .card-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+    .card-title { font-size: 15px; font-weight: 700; line-height: 1.3; }
+    .card-desc { font-size: 13px; color: var(--text-2); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .tag-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; cursor: pointer; transition: opacity var(--transition); white-space: nowrap; }
+    .tag-pill:hover { opacity: .8; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 1px solid var(--border); background: var(--bg); }
+    .card-score { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: #78350f; }
+    .stars { display: inline-flex; gap: 1px; }
+    .star { font-size: 12px; }
+    .star-full { color: #f59e0b; } .star-half { color: #fbbf24; } .star-empty { color: #d1d5db; }
+    .card-time { font-size: 12px; color: var(--text-2); font-weight: 500; }
+    .difficulty-badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 8px; }
+    .diff-easy { background: #dcfce7; color: #15803d; } .diff-medium { background: #fef3c7; color: #b45309; } .diff-hard { background: #fee2e2; color: #dc2626; }
+
+    /* ── TABLE ── */
+    .table-wrap { background: var(--surface); border-radius: var(--radius); border: 1.5px solid var(--border); overflow: hidden; box-shadow: var(--shadow); }
+    .recipes-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .recipes-table th { text-align: left; padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); background: var(--bg); border-bottom: 1.5px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
+    .recipes-table th:hover { color: var(--primary); }
+    .recipes-table th.sorted { color: var(--primary); }
+    .sort-indicator { margin-left: 4px; opacity: .5; }
+    .sort-indicator.active { opacity: 1; }
+    .recipes-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .recipes-table tr:last-child td { border-bottom: none; }
+    .recipes-table tbody tr { cursor: pointer; transition: background var(--transition); }
+    .recipes-table tbody tr:hover { background: var(--primary-bg); }
+    .table-name { font-weight: 600; } .table-tags { display: flex; flex-wrap: wrap; gap: 4px; } .table-time { color: var(--text-2); white-space: nowrap; }
+
+    /* ── EMPTY ── */
+    .empty-state { text-align: center; padding: 80px 20px; color: var(--text-2); }
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 1.1rem; margin-bottom: 8px; color: var(--text); }
+
+    /* ── VIEW MODAL ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(28,25,23,.55); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg); width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; animation: modal-in 0.2s ease; }
+    @keyframes modal-in { from { opacity: 0; transform: translateY(16px) scale(.98); } to { opacity: 1; transform: none; } }
+    .modal-header { display: flex; align-items: flex-start; gap: 16px; padding: 24px 24px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .modal-hero-icon { font-size: 2.8rem; line-height: 1; flex-shrink: 0; }
+    .modal-header-info { flex: 1; min-width: 0; }
+    .modal-title { font-size: 1.3rem; font-weight: 800; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 8px; }
+    .modal-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+    .modal-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .modal-close { width: 34px; height: 34px; border: 1.5px solid var(--border); border-radius: 8px; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-2); font-size: 16px; transition: all var(--transition); }
+    .modal-close:hover { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+    .btn-edit { height: 34px; padding: 0 12px; font-size: 13px; border-radius: 8px; }
+    .modal-meta { display: flex; flex-wrap: wrap; gap: 16px; }
+    .meta-item { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text-2); }
+    .meta-item strong { color: var(--text); font-weight: 600; }
+    .modal-body { overflow-y: auto; padding: 24px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 28px; }
+    .modal-body::-webkit-scrollbar { width: 6px; }
+    .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .modal-section h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); margin-bottom: 14px; }
+    .ingredients-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .ingredients-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.4; }
+    .ingredients-list li::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); flex-shrink: 0; margin-top: 6px; }
+    .steps-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+    .steps-list li { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; line-height: 1.55; }
+    .step-num { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .step-text { flex: 1; }
+
+    /* ── EDIT / CREATE FORM MODAL ── */
+    .form-overlay { display: none; position: fixed; inset: 0; z-index: 300; background: rgba(28,25,23,.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 20px; }
+    .form-overlay.open { display: flex; }
+    .form-box { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg); width: 100%; max-width: 860px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; animation: modal-in 0.2s ease; }
+    .form-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .form-head h2 { font-size: 1.1rem; font-weight: 700; }
+    .form-scroll { overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+    .form-scroll::-webkit-scrollbar { width: 6px; }
+    .form-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-row.full { grid-template-columns: 1fr; }
+    .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); }
+    .field input, .field select, .field textarea {
+      padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 14px; font-family: inherit; color: var(--text); background: var(--bg);
+      outline: none; transition: border-color var(--transition), box-shadow var(--transition);
+      resize: vertical;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(194,65,12,.1); background: #fff; }
+    .field textarea { min-height: 130px; line-height: 1.6; }
+    .field-hint { font-size: 11px; color: var(--text-3); }
+    .score-row { display: flex; align-items: center; gap: 10px; }
+    .score-row input[type=range] { flex: 1; }
+    .score-val { font-size: 14px; font-weight: 700; color: var(--primary); min-width: 28px; }
+
+    /* tag selector in form */
+    .tag-selector { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; min-height: 52px; }
+    .tag-toggle { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; border: 1.5px solid; font-size: 12px; font-weight: 600; cursor: pointer; transition: all var(--transition); user-select: none; }
+    .tag-toggle.on { color: #fff; }
+    .custom-tag-row { display: flex; gap: 8px; margin-top: 6px; }
+    .custom-tag-row input { flex: 1; padding: 7px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--bg); color: var(--text); outline: none; }
+    .custom-tag-row input:focus { border-color: var(--primary); }
+    .custom-tag-row button { height: 36px; padding: 0 12px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+    /* dynamic list (ingredients / steps) */
+    .dyn-list { display: flex; flex-direction: column; gap: 6px; }
+    .dyn-item { display: flex; gap: 8px; align-items: flex-start; }
+    .dyn-item input, .dyn-item textarea { flex: 1; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13.5px; font-family: inherit; color: var(--text); background: var(--bg); outline: none; resize: none; line-height: 1.4; }
+    .dyn-item input:focus, .dyn-item textarea:focus { border-color: var(--primary); background: #fff; }
+    .dyn-remove { width: 30px; height: 30px; border: 1.5px solid var(--border); border-radius: 6px; background: transparent; cursor: pointer; color: var(--text-3); font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 4px; transition: all var(--transition); }
+    .dyn-remove:hover { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+    .dyn-add { align-self: flex-start; margin-top: 4px; font-size: 13px; height: 32px; padding: 0 12px; }
+
+    /* form footer */
+    .form-foot { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-top: 1px solid var(--border); flex-shrink: 0; background: var(--bg); }
+    .form-foot-right { display: flex; gap: 8px; }
+    .btn-delete { color: #dc2626; border-color: #fca5a5; }
+    .btn-delete:hover { background: #fee2e2; border-color: #dc2626; color: #dc2626; }
+    .btn-save { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .btn-save:hover { background: #b83b0b; }
+
+    @media (max-width: 700px) {
+      .brand-title { display: none; }
+      .modal-body { grid-template-columns: 1fr; }
+      .content { padding: 16px; }
+      .cards-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+      .form-row, .form-row.three { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) { .cards-grid { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
-  <script>window.location.replace('cooking');</script>
+
+<header class="app-header">
+  <a class="brand" href="#"><span class="brand-icon">🍳</span><span class="brand-title">Recipes</span></a>
+  <div class="search-wrap">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="search" id="search" placeholder="Search recipes…" autocomplete="off" />
+  </div>
+  <div class="header-right">
+    <button class="btn" id="btn-filters">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+      Filters
+    </button>
+    <div class="view-toggle">
+      <button class="btn" id="view-cards" title="Cards">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+      </button>
+      <button class="btn" id="view-table" title="Table">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <button class="btn btn-new" id="btn-new">＋ New Recipe</button>
+  </div>
+</header>
+
+<div class="filter-panel" id="filter-panel">
+  <div class="filter-inner">
+    <div class="filter-section" style="flex:2;min-width:240px">
+      <h3>Tags</h3><div class="tag-cloud" id="tag-cloud"></div>
+    </div>
+    <div class="filter-section">
+      <h3>Score</h3>
+      <div class="slider-row"><input type="range" id="score-slider" min="0" max="5" step="0.5" value="0"/><span class="slider-label" id="score-label">Any</span></div>
+      <div class="slider-row"><input type="range" id="score-max-slider" min="0" max="5" step="0.5" value="5"/><span class="slider-label" id="score-max-label">Max: 5★</span></div>
+    </div>
+    <div class="filter-section">
+      <h3>Max Time</h3>
+      <div class="slider-row"><input type="range" id="time-slider" min="10" max="480" step="5" value="480"/><span class="slider-label" id="time-label">Any</span></div>
+    </div>
+    <div class="filter-actions"><button class="btn" id="btn-clear">Clear all</button></div>
+  </div>
+</div>
+
+<div class="subbar">
+  <div class="active-filters" id="active-filters"></div>
+  <span class="results-count" id="results-count"></span>
+</div>
+
+<div class="content"><div id="content-area"></div></div>
+
+<!-- View modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<!-- Edit / Create form modal -->
+<div class="form-overlay" id="form-overlay">
+  <div class="form-box">
+    <div class="form-head">
+      <h2 id="form-title">New Recipe</h2>
+      <button class="modal-close" id="form-close">✕</button>
+    </div>
+    <div class="form-scroll" id="form-scroll">
+      <div class="form-row full"><div class="field">
+        <label>Name</label>
+        <input id="f-name" type="text" placeholder="e.g. Spaghetti Carbonara" />
+      </div></div>
+      <div class="form-row full"><div class="field">
+        <label>Description</label>
+        <textarea id="f-desc" rows="2" placeholder="A short, enticing description…"></textarea>
+      </div></div>
+
+      <div class="field">
+        <label>Tags</label>
+        <div class="tag-selector" id="f-tag-selector"></div>
+        <div class="custom-tag-row">
+          <input id="f-custom-tag" type="text" placeholder="Add custom tag…" />
+          <button type="button" id="f-add-tag">Add</button>
+        </div>
+      </div>
+
+      <div class="form-row three">
+        <div class="field">
+          <label>Score (0–5)</label>
+          <div class="score-row">
+            <input type="range" id="f-score" min="0" max="5" step="0.1" value="4.0" />
+            <span class="score-val" id="f-score-val">4.0</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Servings</label>
+          <input id="f-servings" type="number" min="1" max="50" value="4" />
+        </div>
+        <div class="field">
+          <label>Difficulty</label>
+          <select id="f-difficulty">
+            <option>Easy</option><option selected>Medium</option><option>Hard</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>Prep Time (minutes)</label>
+          <input id="f-prep" type="number" min="0" value="15" />
+        </div>
+        <div class="field">
+          <label>Cook Time (minutes)</label>
+          <input id="f-cook" type="number" min="0" value="30" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>Ingredients</label>
+          <div class="dyn-list" id="f-ingredients"></div>
+          <button type="button" class="btn dyn-add" id="add-ingredient">＋ Add ingredient</button>
+        </div>
+        <div class="field">
+          <label>Steps</label>
+          <div class="dyn-list" id="f-steps"></div>
+          <button type="button" class="btn dyn-add" id="add-step">＋ Add step</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-foot">
+      <button class="btn btn-delete" id="btn-delete" style="display:none">🗑 Delete</button>
+      <div class="form-foot-right">
+        <button class="btn" id="btn-cancel">Cancel</button>
+        <button class="btn btn-save" id="btn-save">Save Recipe</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Default data ──────────────────────────────────────────────────────────────
+const DEFAULTS = [{"id":"1","name":"Spaghetti Carbonara","description":"A rich, creamy Roman pasta made with eggs, Pecorino Romano, guanciale, and black pepper. No cream needed — just technique.","tags":["Italian","Pasta","Dinner"],"score":4.8,"prepTime":10,"cookTime":20,"totalTime":30,"servings":4,"difficulty":"Medium","ingredients":["400g spaghetti","200g guanciale or pancetta, cubed","4 large eggs + 2 extra yolks","100g Pecorino Romano, finely grated","50g Parmesan, finely grated","Freshly ground black pepper","Salt for pasta water"],"steps":["Bring a large pot of heavily salted water to a boil. Cook spaghetti until al dente.","While pasta cooks, fry guanciale in a cold pan over medium heat until the fat renders and it turns crispy. Remove pan from heat.","Whisk together eggs, extra yolks, and both grated cheeses in a bowl. Season very generously with black pepper.","Reserve at least 1 cup of pasta cooking water before draining.","Add hot drained pasta directly to the pan with guanciale (off the heat). Toss to coat in the fat.","Pour in the egg-cheese mixture and toss vigorously, adding pasta water a splash at a time until the sauce is silky and clings to the pasta.","Plate immediately and finish with more cheese and cracked black pepper."]},{"id":"2","name":"Chicken Tikka Masala","description":"Tender charred chicken swimming in a fragrant, creamy tomato sauce. Marinating overnight makes all the difference.","tags":["Asian","Chicken","Dinner"],"score":4.7,"prepTime":20,"cookTime":40,"totalTime":60,"servings":4,"difficulty":"Medium","ingredients":["800g boneless chicken thighs, cubed","200g plain full-fat yogurt","2 tbsp tikka masala paste","2 tbsp butter or ghee","1 large onion, finely diced","5 garlic cloves, minced","1 tbsp fresh ginger, grated","1 can (400g) crushed tomatoes","150ml heavy cream","1 tsp garam masala","1 tsp ground cumin","½ tsp turmeric","Salt to taste","Fresh cilantro to garnish","Basmati rice and naan to serve"],"steps":["Mix chicken with yogurt and tikka masala paste. Cover and marinate in the fridge for at least 1 hour, preferably overnight.","Grill or broil the marinated chicken on high heat until charred in spots and cooked through, about 8 minutes. Set aside.","Melt butter in a large heavy pan over medium heat. Add onion and cook until deep golden, about 10 minutes.","Add garlic and ginger, stir for 2 minutes. Add cumin and turmeric, cook 30 seconds.","Pour in tomatoes and simmer, stirring occasionally, for 15 minutes until the sauce thickens and darkens.","Optional: blend the sauce until smooth, then return to pan.","Add the grilled chicken and cream. Simmer gently for 10 minutes. Stir in garam masala and adjust seasoning.","Garnish with cilantro and serve with rice and warm naan."]},{"id":"3","name":"Avocado Toast","description":"The humble classic done right — perfectly ripe avocado, seasoned well, on properly toasted sourdough. Endlessly customizable.","tags":["Vegetarian","Breakfast","Quick"],"score":4.2,"prepTime":5,"cookTime":5,"totalTime":10,"servings":2,"difficulty":"Easy","ingredients":["2 slices thick sourdough bread","2 ripe avocados","1 lemon, juiced","Flaky sea salt","Red pepper flakes","Extra virgin olive oil","2 eggs (optional, poached or fried)","Microgreens or radish to garnish"],"steps":["Toast the bread until deeply golden and crunchy — don't under-toast it.","Halve and pit the avocados. Scoop flesh into a bowl.","Add lemon juice and a generous pinch of flaky salt. Mash with a fork to your preferred texture — I like it still a bit chunky.","Pile the avocado onto the toast and spread to the edges.","Drizzle with olive oil. Top with red pepper flakes, more flaky salt, and any garnishes you like.","Add a poached or fried egg on top if you want to make it a full meal."]},{"id":"4","name":"Beef Tacos al Pastor","description":"Street-style tacos with marinated beef, charred pineapple, and all the fixings. Quick to assemble once the marinade is done.","tags":["Mexican","Beef","Dinner"],"score":4.6,"prepTime":15,"cookTime":15,"totalTime":30,"servings":4,"difficulty":"Easy","ingredients":["600g beef sirloin, thinly sliced","3 tbsp achiote paste","2 tbsp white wine vinegar","1 tsp cumin","1 tsp dried oregano","4 garlic cloves, minced","200g pineapple, sliced","Small corn tortillas","White onion, finely diced","Fresh cilantro","Lime wedges","Salsa verde to serve"],"steps":["Mix achiote paste, vinegar, cumin, oregano, and garlic into a marinade. Coat beef slices well and leave for at least 15 minutes (longer is better).","Heat a cast-iron pan or griddle until very hot. Cook pineapple slices until charred on both sides. Chop roughly and set aside.","In the same pan, cook beef in batches on high heat for 2–3 minutes until caramelized at the edges.","Warm tortillas directly on a gas flame or in a dry pan until blistered.","Build tacos: beef, charred pineapple, onion, cilantro. Finish with salsa verde and a squeeze of lime."]},{"id":"5","name":"Tom Yum Soup","description":"Thailand's most iconic soup — hot, sour, and deeply aromatic. The lemongrass and kaffir lime leaves are non-negotiable.","tags":["Asian","Soup","Seafood"],"score":4.6,"prepTime":15,"cookTime":25,"totalTime":40,"servings":4,"difficulty":"Medium","ingredients":["1 litre good chicken or seafood stock","400g large prawns, peeled","200g mushrooms (straw or oyster), halved","2 stalks lemongrass, bruised and cut into 3cm pieces","5 kaffir lime leaves, torn","4 slices fresh galangal or ginger","3–4 bird's eye chillies, bruised","3 tbsp fish sauce","3 tbsp lime juice","1 tsp palm sugar or brown sugar","Fresh cilantro to garnish"],"steps":["Bring stock to a boil in a large pot. Add lemongrass, kaffir lime leaves, galangal, and chillies.","Simmer the aromatics for 10 minutes to infuse the broth.","Add mushrooms and cook 3 minutes.","Add prawns and cook just until pink and curled, about 2 minutes.","Season with fish sauce, lime juice, and sugar. Taste and adjust — it should be aggressively sour, salty, and spicy.","Serve immediately in bowls, garnished generously with fresh cilantro."]},{"id":"6","name":"Fluffy Banana Pancakes","description":"Naturally sweetened banana pancakes that are soft, fluffy, and require no electric mixer. A perfect lazy weekend breakfast.","tags":["Breakfast","Vegetarian","Quick"],"score":4.4,"prepTime":10,"cookTime":15,"totalTime":25,"servings":2,"difficulty":"Easy","ingredients":["2 very ripe bananas","2 eggs","120g all-purpose flour","1 tsp baking powder","½ tsp cinnamon","Pinch of salt","100ml milk","Butter for frying","Maple syrup and fresh berries to serve"],"steps":["Mash bananas thoroughly in a large bowl — the riper, the better.","Whisk in eggs and milk until combined.","Sift in flour, baking powder, cinnamon, and salt. Fold gently until just combined — a few lumps are fine.","Melt a knob of butter in a non-stick pan over medium-low heat.","Pour about ¼ cup of batter per pancake. Cook until bubbles form on the surface and edges look set, about 2–3 minutes.","Flip carefully and cook 1–2 minutes more. Repeat with remaining batter.","Serve with maple syrup and fresh berries."]},{"id":"7","name":"Classic Caesar Salad","description":"A proper Caesar with a punchy homemade dressing, house-made croutons, and a shower of real Parmesan. Worth every anchovy.","tags":["Salad","Lunch","Quick"],"score":4.5,"prepTime":15,"cookTime":10,"totalTime":25,"servings":4,"difficulty":"Easy","ingredients":["2 large heads romaine lettuce, roughly torn","4 anchovy fillets, minced to a paste","2 garlic cloves, minced","2 tbsp Dijon mustard","2 tbsp Worcestershire sauce","2 tbsp lemon juice","1 egg yolk","100ml extra virgin olive oil","60g Parmesan, finely grated","Salt and black pepper","For croutons: 3 slices day-old sourdough, 2 tbsp olive oil, garlic powder"],"steps":["Make croutons: tear bread into chunks, toss with olive oil and garlic powder, toast in a 200°C oven for 10 minutes until golden.","Make dressing: whisk together anchovies, garlic, mustard, Worcestershire, and lemon juice. Whisk in egg yolk.","Slowly drizzle in olive oil while whisking constantly until emulsified. Stir in half the Parmesan. Season with salt and pepper.","In a large bowl, toss romaine with just enough dressing to coat each leaf.","Top with croutons and remaining Parmesan. Serve immediately."]},{"id":"8","name":"Slow-Cooked Pulled Pork","description":"Low and slow is the only way. Smoky, fall-apart pork shoulder that rewards patience. Makes incredible sandwiches all week long.","tags":["American","Pork","Slow"],"score":4.9,"prepTime":20,"cookTime":480,"totalTime":500,"servings":8,"difficulty":"Easy","ingredients":["2kg pork shoulder (bone-in for more flavor)","2 tbsp smoked paprika","1 tbsp brown sugar","1 tbsp garlic powder","1 tbsp onion powder","1 tsp cumin","1 tsp cayenne pepper","1 tsp black pepper","2 tsp salt","200ml apple cider vinegar","Brioche buns and coleslaw to serve","BBQ sauce to serve"],"steps":["Combine all the dry spices into a rub. Score the pork shoulder all over and massage the rub in generously.","Ideally, wrap and refrigerate overnight. Otherwise, rest at room temperature for 1 hour.","Preheat oven to 150°C (300°F). Place pork in a roasting tin, add vinegar to the bottom. Cover tightly with foil.","Roast for 7–8 hours until the meat is completely tender and pulls apart with a fork.","Remove foil, increase oven to 220°C (425°F), and roast uncovered for 20 more minutes to crisp the outside.","Rest for 20 minutes, then pull apart with two forks into big shreds.","Serve piled high on brioche buns with coleslaw and BBQ sauce."]},{"id":"9","name":"Vegan Buddha Bowl","description":"A vibrant, nourishing bowl packed with roasted vegetables, grains, and a tahini-lemon dressing that ties it all together.","tags":["Vegan","Vegetarian","Healthy","Lunch"],"score":4.1,"prepTime":15,"cookTime":30,"totalTime":45,"servings":2,"difficulty":"Easy","ingredients":["200g cooked quinoa or brown rice","1 can chickpeas, drained and dried","1 large sweet potato, cubed","1 head broccoli, cut into florets","2 handfuls baby spinach","1 avocado, sliced","2 tbsp olive oil","For dressing: 3 tbsp tahini, 2 tbsp lemon juice, 1 garlic clove, 2–3 tbsp water, salt"],"steps":["Preheat oven to 200°C. Toss sweet potato and chickpeas with olive oil, salt, and your choice of spices. Spread on a baking sheet.","Roast for 25 minutes, adding broccoli halfway through, until everything is roasted and the chickpeas are crispy.","Make dressing: blend or whisk together tahini, lemon juice, minced garlic, and enough water to make it pourable. Season with salt.","Warm the quinoa or rice and divide between bowls.","Arrange spinach, roasted vegetables, chickpeas, and avocado on top.","Drizzle generously with tahini dressing and serve."]},{"id":"10","name":"Chocolate Lava Cake","description":"Individual chocolate cakes with a molten, flowing centre. Looks impossibly impressive, but the batter can be made hours ahead.","tags":["Dessert","Baking"],"score":4.8,"prepTime":15,"cookTime":12,"totalTime":27,"servings":4,"difficulty":"Medium","ingredients":["150g dark chocolate (70% cocoa), chopped","150g unsalted butter, plus extra for ramekins","4 eggs","4 egg yolks","150g caster sugar","50g all-purpose flour","Pinch of salt","Cocoa powder for dusting","Vanilla ice cream to serve"],"steps":["Butter four ramekins and dust with cocoa powder, tapping out any excess. Place on a baking tray.","Melt chocolate and butter together in a heatproof bowl over simmering water (or in short microwave bursts). Stir until smooth. Cool slightly.","Whisk eggs, egg yolks, and sugar together until the mixture is pale and thick, about 3 minutes.","Fold the chocolate mixture into the egg mixture until combined. Sift in flour and salt, fold gently.","Divide batter among ramekins. Refrigerate for at least 20 minutes (or up to 24 hours).","Preheat oven to 200°C. Bake for 10–12 minutes — the edges should be set but the center should wobble when shaken.","Run a knife around the edge, invert onto plates, and serve immediately with vanilla ice cream."]},{"id":"11","name":"Garlic Butter Shrimp","description":"Plump prawns seared in a shamelessly buttery, garlicky sauce. On the table in 20 minutes and tastes like a restaurant dish.","tags":["Seafood","Dinner","Quick"],"score":4.6,"prepTime":10,"cookTime":10,"totalTime":20,"servings":4,"difficulty":"Easy","ingredients":["600g large prawns, peeled and deveined","6 garlic cloves, thinly sliced","80g unsalted butter","2 tbsp olive oil","1 tsp red pepper flakes","100ml dry white wine or chicken stock","Juice of 1 lemon","Large handful of fresh parsley, chopped","Salt and black pepper","Crusty bread or pasta to serve"],"steps":["Pat prawns dry with paper towel and season well with salt and pepper.","Heat olive oil in a large pan over high heat until shimmering. Add prawns in a single layer.","Sear without moving for 1.5 minutes until pink and caramelized on one side. Flip and cook 30 more seconds. Remove from pan.","Reduce heat to medium. Add butter and garlic to the same pan and cook until garlic is fragrant and just starting to turn golden, about 1 minute.","Add red pepper flakes and white wine. Let it bubble and reduce by half, scraping any bits from the pan.","Return prawns to the pan. Add lemon juice and parsley. Toss to coat.","Serve immediately with crusty bread to mop up the sauce."]},{"id":"12","name":"Tonkotsu Ramen","description":"A deeply porky, milky-white broth that takes time but is absolutely worth it. Topped with chashu, soft-boiled eggs, and noodles.","tags":["Asian","Soup","Pork"],"score":4.9,"prepTime":30,"cookTime":240,"totalTime":270,"servings":4,"difficulty":"Hard","ingredients":["1kg pork trotters, split","500g pork neck bones","500g pork belly (for chashu)","4 portions fresh ramen noodles","4 soft-boiled eggs, marinated in soy and mirin","4 garlic cloves","1 large onion, halved and charred","4 spring onions","2 tbsp soy sauce","2 tbsp mirin","Sesame oil, nori, bamboo shoots to garnish"],"steps":["Blanch trotters and neck bones in boiling water for 5 minutes. Drain and rinse thoroughly under cold water.","Place blanched bones in a large pot with enough cold water to cover by 5cm. Bring to a vigorous boil and keep at a rolling boil for 3–4 hours, adding water as needed, until the broth turns white and creamy.","While broth cooks, make chashu: roll and tie pork belly, sear all over, braise in soy, mirin, sake, and sugar for 2 hours.","Char onion halves directly on a gas flame or under the broiler. Add to broth with garlic for the last hour.","Strain broth. Season with soy sauce, mirin, and salt to taste.","Marinate peeled soft-boiled eggs in a 1:1 mix of soy sauce and mirin for at least 2 hours.","Cook noodles per package. Divide into bowls, ladle over hot broth, and top with chashu slices, halved eggs, spring onions, nori, and a drizzle of sesame oil."]},{"id":"13","name":"Margherita Pizza","description":"Neapolitan-style pizza at home. A hot oven, quality ingredients, and restraint — less is more with a great Margherita.","tags":["Italian","Vegetarian","Dinner"],"score":4.5,"prepTime":30,"cookTime":15,"totalTime":45,"servings":2,"difficulty":"Medium","ingredients":["For dough: 300g 00 flour, 200ml warm water, 7g instant yeast, 1 tsp salt, 1 tsp olive oil","200g San Marzano tomatoes, crushed by hand","200g fresh mozzarella, torn","Small handful fresh basil leaves","2 tbsp extra virgin olive oil","Salt"],"steps":["Make dough: combine flour, salt, and yeast. Add warm water and olive oil. Knead 8–10 minutes until smooth and elastic. Cover and rise 1 hour.","Preheat your oven to its maximum temperature (ideally 280°C+) with a pizza stone or steel inside.","Season crushed tomatoes lightly with salt. Do not cook them.","Divide dough in two. Stretch each piece on a lightly floured surface into a thin round — use your hands, not a rolling pin.","Spread a thin layer of tomatoes, leaving a 2cm border. Scatter over the mozzarella.","Slide onto the hot stone and bake for 8–10 minutes until the crust is charred at the edges and the cheese is bubbling.","Top with fresh basil and a drizzle of extra virgin olive oil immediately after baking."]},{"id":"14","name":"Greek Salad","description":"A no-cook salad built on ripe tomatoes, cucumber, olives, and a generous slab of feta. Olive oil is the dressing — that's all you need.","tags":["Salad","Vegetarian","Quick","Lunch"],"score":4.3,"prepTime":10,"cookTime":0,"totalTime":10,"servings":4,"difficulty":"Easy","ingredients":["4 large ripe tomatoes, cut into wedges","1 large cucumber, cut into thick half-moons","1 green pepper, sliced into rings","200g block of feta cheese","100g Kalamata olives","½ small red onion, thinly sliced","4 tbsp extra virgin olive oil","1 tsp dried Greek oregano","Salt and black pepper"],"steps":["Arrange tomatoes, cucumber, pepper, and onion in a large bowl or on a platter. Don't toss — keep it rustic.","Scatter over the olives.","Place the whole feta block on top and crumble it slightly — you want big chunks, not crumbles.","Drizzle generously with olive oil.","Sprinkle dried oregano over everything and season with salt and black pepper.","Serve immediately with crusty bread."]},{"id":"15","name":"French Onion Soup","description":"Caramelized onions, rich beef broth, and a bubbling Gruyère crust. One of the great soups of the world, worth every hour of stirring.","tags":["French","Soup","Dinner"],"score":4.7,"prepTime":15,"cookTime":90,"totalTime":105,"servings":4,"difficulty":"Medium","ingredients":["1.2kg yellow onions (about 6 large), thinly sliced","60g unsalted butter","1 tbsp olive oil","1 tsp sugar","200ml dry white wine","1.5 litres good beef stock","2 sprigs fresh thyme","2 bay leaves","Salt and black pepper","For the crouton: 4 thick slices sourdough","200g Gruyère cheese, grated"],"steps":["Melt butter with olive oil in a large heavy pot over medium-low heat. Add all the sliced onions and stir well to coat.","Cook onions, stirring every 5–10 minutes, for 60–70 minutes. They will wilt, then slowly turn golden, then deep amber. Patience is everything here. Add sugar halfway through to help caramelization.","Deglaze with white wine, scraping up any sticky bits from the bottom. Let it bubble for 2 minutes.","Add beef stock, thyme, and bay leaves. Simmer for 20 minutes. Season with salt and pepper. Remove thyme and bay.","Toast sourdough slices until golden.","Ladle hot soup into oven-safe bowls. Place a bread slice on top, pile over the Gruyère generously.","Broil under the grill until the cheese is melted, bubbling, and dark in spots. Serve immediately — carefully, the bowls will be very hot."]}];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const TC={Italian:'#ef4444',Pasta:'#fb923c',French:'#60a5fa',Asian:'#f97316',Mexican:'#eab308',American:'#22c55e',Vegetarian:'#16a34a',Vegan:'#059669',Healthy:'#10b981',Quick:'#3b82f6',Slow:'#8b5cf6',Breakfast:'#f59e0b',Lunch:'#06b6d4',Dinner:'#6366f1',Dessert:'#ec4899',Baking:'#a78bfa',Soup:'#14b8a6',Salad:'#84cc16',Seafood:'#0ea5e9',Chicken:'#d97706',Beef:'#dc2626',Pork:'#f87171'};
+const TE={Italian:'🍝',Pasta:'🍝',French:'🥐',Asian:'🍜',Mexican:'🌮',American:'🍔',Vegetarian:'🥗',Vegan:'🌱',Breakfast:'🍳',Lunch:'🥙',Dinner:'🍽️',Dessert:'🍰',Baking:'🧁',Soup:'🍲',Salad:'🥗',Seafood:'🦐',Chicken:'🍗',Beef:'🥩',Pork:'🥓',Healthy:'🌿'};
+const NF=new Set(['Quick','Slow','Healthy','Vegan','Vegetarian','Dinner','Lunch','Breakfast']);
+const PRESET_TAGS=Object.keys(TC);
+function tc(t){return TC[t]||'#9ca3af';}
+function emoji(tags){for(const t of tags)if(TE[t]&&!NF.has(t))return TE[t];for(const t of tags)if(TE[t])return TE[t];return'🍴';}
+function grad(tags){const c=tc(tags[0]);return`linear-gradient(135deg,${c}55 0%,${c}22 100%)`;}
+function fmt(m){if(!m)return'—';if(m<60)return`${m}m`;const h=Math.floor(m/60),r=m%60;return r?`${h}h ${r}m`:`${h}h`;}
+function stars(s){let h='';for(let i=1;i<=5;i++){if(i<=Math.floor(s))h+='<span class="star star-full">★</span>';else if(i===Math.ceil(s)&&s%1>=.5)h+='<span class="star star-half">★</span>';else h+='<span class="star star-empty">★</span>';}return`<span class="stars">${h}</span>`;}
+function dc(d){return{Easy:'diff-easy',Medium:'diff-medium',Hard:'diff-hard'}[d]||'diff-easy';}
+function pill(t,click=true){const c=tc(t);return`<span class="tag-pill" style="background:${c}1a;color:${c};border:1px solid ${c}40" ${click?`data-qt="${t}"`:''}>${t}</span>`;}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+// ── Persistence ───────────────────────────────────────────────────────────────
+function loadRecipes(){try{const s=localStorage.getItem('recipes');return s?JSON.parse(s):DEFAULTS;}catch{return DEFAULTS;}}
+function persist(){localStorage.setItem('recipes',JSON.stringify(S.recipes));}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const S={recipes:loadRecipes(),filtered:[],view:'cards',panelOpen:false,search:'',tags:new Set(),minScore:0,maxScore:5,maxTime:480,sortBy:'name',sortDir:1,allTags:[]};
+
+// ── Filter ────────────────────────────────────────────────────────────────────
+function refreshTags(){const ts=new Set();S.recipes.forEach(r=>r.tags.forEach(t=>ts.add(t)));S.allTags=[...ts].sort();}
+function filter(){
+  const q=S.search.toLowerCase();
+  let r=S.recipes.filter(rec=>{
+    if(q&&!rec.name.toLowerCase().includes(q)&&!rec.description.toLowerCase().includes(q)&&!rec.tags.some(t=>t.toLowerCase().includes(q)))return false;
+    if(S.tags.size&&!rec.tags.some(t=>S.tags.has(t)))return false;
+    if(rec.score<S.minScore||rec.score>S.maxScore)return false;
+    if(rec.totalTime>S.maxTime)return false;
+    return true;
+  });
+  if(S.view==='table')r=[...r].sort((a,b)=>{let va=a[S.sortBy],vb=b[S.sortBy];if(typeof va==='string'){va=va.toLowerCase();vb=vb.toLowerCase();}return(va<vb?-1:va>vb?1:0)*S.sortDir;});
+  S.filtered=r;
+  renderContent();renderChips();renderCount();
+}
+
+// ── Render: content ───────────────────────────────────────────────────────────
+function renderCards(){
+  if(!S.filtered.length)return`<div class="empty-state"><div class="empty-icon">🔍</div><h3>No recipes found</h3><p>Try adjusting your filters or <a href="#" id="link-new" style="color:var(--primary)">add a new recipe</a>.</p></div>`;
+  return`<div class="cards-grid">${S.filtered.map(r=>`<div class="recipe-card" data-id="${r.id}"><div class="card-hero" style="background:${grad(r.tags)}">${emoji(r.tags)}</div><div class="card-body"><div class="card-title">${r.name}</div><div class="card-desc">${r.description}</div><div class="card-tags">${r.tags.map(t=>pill(t)).join('')}</div></div><div class="card-footer"><div class="card-score">${stars(r.score)} ${r.score.toFixed(1)}</div><div class="card-time">⏱ ${fmt(r.totalTime)}</div><span class="difficulty-badge ${dc(r.difficulty)}">${r.difficulty}</span></div></div>`).join('')}</div>`;
+}
+function renderTable(){
+  if(!S.filtered.length)return`<div class="empty-state"><div class="empty-icon">🔍</div><h3>No recipes found</h3><p>Try adjusting your filters.</p></div>`;
+  const cols=[{k:'name',l:'Recipe'},{k:'tags',l:'Tags',ns:true},{k:'score',l:'Score'},{k:'prepTime',l:'Prep'},{k:'cookTime',l:'Cook'},{k:'totalTime',l:'Total'},{k:'difficulty',l:'Difficulty'}];
+  const ths=cols.map(c=>{if(c.ns)return`<th>${c.l}</th>`;const a=S.sortBy===c.k;return`<th class="${a?'sorted':''}" data-sort="${c.k}">${c.l} <span class="sort-indicator ${a?'active':''}">${a?(S.sortDir===1?'↑':'↓'):'↕'}</span></th>`;}).join('');
+  const rows=S.filtered.map(r=>`<tr data-id="${r.id}"><td class="table-name">${r.name}</td><td><div class="table-tags">${r.tags.map(t=>pill(t)).join('')}</div></td><td>${stars(r.score)} <strong>${r.score.toFixed(1)}</strong></td><td class="table-time">${fmt(r.prepTime)}</td><td class="table-time">${fmt(r.cookTime)}</td><td class="table-time">${fmt(r.totalTime)}</td><td><span class="difficulty-badge ${dc(r.difficulty)}">${r.difficulty}</span></td></tr>`).join('');
+  return`<div class="table-wrap"><table class="recipes-table"><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function renderTagCloud(){
+  document.getElementById('tag-cloud').innerHTML=S.allTags.map(t=>{const c=tc(t),sel=S.tags.has(t);return`<span class="filter-tag ${sel?'selected':''}" style="${sel?`background:${c};color:#fff;border-color:${c}`:`background:${c}1a;color:${c};border-color:${c}55`}" data-tag="${t}">${t}</span>`;}).join('');
+}
+function renderChips(){
+  const chips=[];
+  S.tags.forEach(t=>chips.push(`<span class="active-chip" data-rt="${t}">${t} <span class="chip-x">×</span></span>`));
+  if(S.minScore>0)chips.push(`<span class="active-chip" data-rm="minScore">★ ${S.minScore.toFixed(1)}+ <span class="chip-x">×</span></span>`);
+  if(S.maxScore<5)chips.push(`<span class="active-chip" data-rm="maxScore">★ ≤${S.maxScore.toFixed(1)} <span class="chip-x">×</span></span>`);
+  if(S.maxTime<480)chips.push(`<span class="active-chip" data-rm="maxTime">⏱ ≤${fmt(S.maxTime)} <span class="chip-x">×</span></span>`);
+  if(S.search)chips.push(`<span class="active-chip" data-rm="search">"${S.search}" <span class="chip-x">×</span></span>`);
+  document.getElementById('active-filters').innerHTML=chips.join('');
+}
+function renderCount(){const t=S.recipes.length,s=S.filtered.length;document.getElementById('results-count').textContent=s===t?`${t} recipes`:`${s} of ${t} recipes`;}
+function renderContent(){document.getElementById('content-area').innerHTML=S.view==='cards'?renderCards():renderTable();}
+
+// ── View modal ────────────────────────────────────────────────────────────────
+function openModal(id){
+  const r=S.recipes.find(x=>x.id===id);if(!r)return;
+  document.getElementById('modal-box').innerHTML=`
+    <div class="modal-header">
+      <div class="modal-hero-icon">${emoji(r.tags)}</div>
+      <div class="modal-header-info">
+        <div class="modal-title">${r.name}</div>
+        <div class="modal-tags">${r.tags.map(t=>pill(t,false)).join('')}</div>
+        <div class="modal-meta">
+          <span class="meta-item">⭐ <strong>${r.score.toFixed(1)}</strong>/5</span>
+          <span class="meta-item">⏱ <strong>${fmt(r.totalTime)}</strong></span>
+          <span class="meta-item">🔪 <strong>${fmt(r.prepTime)}</strong> prep</span>
+          <span class="meta-item">🔥 <strong>${fmt(r.cookTime)}</strong> cook</span>
+          <span class="meta-item">👤 <strong>${r.servings}</strong> servings</span>
+          <span class="meta-item"><span class="difficulty-badge ${dc(r.difficulty)}">${r.difficulty}</span></span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-edit" data-edit="${r.id}">✏️ Edit</button>
+        <button class="modal-close" id="mc">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section"><h3>Ingredients</h3><ul class="ingredients-list">${r.ingredients.map(i=>`<li>${i}</li>`).join('')}</ul></div>
+      <div class="modal-section"><h3>Method</h3><ol class="steps-list">${r.steps.map((s,i)=>`<li><span class="step-num">${i+1}</span><span class="step-text">${s}</span></li>`).join('')}</ol></div>
+    </div>`;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('mc').onclick=closeModal;
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+
+// ── Form: dynamic list helpers ────────────────────────────────────────────────
+function addDynItem(listId, value='', multiline=false){
+  const list=document.getElementById(listId);
+  const div=document.createElement('div');div.className='dyn-item';
+  if(multiline){
+    const ta=document.createElement('textarea');ta.rows=2;ta.value=value;ta.placeholder='Step…';
+    div.appendChild(ta);
+  } else {
+    const inp=document.createElement('input');inp.type='text';inp.value=value;inp.placeholder='Ingredient…';
+    div.appendChild(inp);
+  }
+  const btn=document.createElement('button');btn.type='button';btn.className='dyn-remove';btn.textContent='×';
+  btn.onclick=()=>div.remove();
+  div.appendChild(btn);list.appendChild(div);
+}
+function getDynValues(listId){
+  return [...document.getElementById(listId).querySelectorAll('input,textarea')]
+    .map(el=>el.value.trim()).filter(Boolean);
+}
+
+// ── Form: tag selector ────────────────────────────────────────────────────────
+let formTags=new Set();
+function renderFormTags(allTags){
+  const sel=document.getElementById('f-tag-selector');
+  sel.innerHTML=allTags.map(t=>{
+    const c=tc(t),on=formTags.has(t);
+    return`<span class="tag-toggle ${on?'on':''}" style="${on?`background:${c};border-color:${c}`:`background:${c}1a;color:${c};border-color:${c}55`}" data-ftag="${t}">${t}</span>`;
+  }).join('');
+}
+function getFormAllTags(){
+  const ts=new Set([...PRESET_TAGS,...S.allTags,...formTags]);
+  return [...ts].sort();
+}
+
+// ── Form: open / close ────────────────────────────────────────────────────────
+let editingId=null;
+function openForm(recipe=null){
+  editingId=recipe?recipe.id:null;
+  document.getElementById('form-title').textContent=recipe?'Edit Recipe':'New Recipe';
+  document.getElementById('btn-delete').style.display=recipe?'':'none';
+  formTags=new Set(recipe?recipe.tags:[]);
+
+  // Fill fields
+  document.getElementById('f-name').value=recipe?recipe.name:'';
+  document.getElementById('f-desc').value=recipe?recipe.description:'';
+  document.getElementById('f-score').value=recipe?recipe.score:4.0;
+  document.getElementById('f-score-val').textContent=recipe?recipe.score.toFixed(1):'4.0';
+  document.getElementById('f-servings').value=recipe?recipe.servings:4;
+  document.getElementById('f-difficulty').value=recipe?recipe.difficulty:'Medium';
+  document.getElementById('f-prep').value=recipe?recipe.prepTime:15;
+  document.getElementById('f-cook').value=recipe?recipe.cookTime:30;
+
+  // Dynamic lists
+  const il=document.getElementById('f-ingredients');il.innerHTML='';
+  const sl=document.getElementById('f-steps');sl.innerHTML='';
+  (recipe?recipe.ingredients:['','','']).forEach(v=>addDynItem('f-ingredients',v,false));
+  (recipe?recipe.steps:['','']).forEach(v=>addDynItem('f-steps',v,true));
+
+  renderFormTags(getFormAllTags());
+  document.getElementById('form-overlay').classList.add('open');
+  document.getElementById('form-scroll').scrollTop=0;
+  closeModal();
+}
+function closeForm(){document.getElementById('form-overlay').classList.remove('open');}
+
+function saveForm(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){alert('Please enter a recipe name.');return;}
+  const ingredients=getDynValues('f-ingredients');
+  const steps=getDynValues('f-steps');
+  if(!ingredients.length){alert('Add at least one ingredient.');return;}
+  if(!steps.length){alert('Add at least one step.');return;}
+  const prep=parseInt(document.getElementById('f-prep').value)||0;
+  const cook=parseInt(document.getElementById('f-cook').value)||0;
+  const recipe={
+    id:editingId||uid(),
+    name,
+    description:document.getElementById('f-desc').value.trim(),
+    tags:[...formTags],
+    score:parseFloat(document.getElementById('f-score').value),
+    prepTime:prep, cookTime:cook, totalTime:prep+cook,
+    servings:parseInt(document.getElementById('f-servings').value)||1,
+    difficulty:document.getElementById('f-difficulty').value,
+    ingredients, steps,
+  };
+  if(editingId){
+    const idx=S.recipes.findIndex(r=>r.id===editingId);
+    if(idx!==-1)S.recipes[idx]=recipe;
+  } else {
+    S.recipes.push(recipe);
+  }
+  persist();refreshTags();renderTagCloud();filter();
+  closeForm();
+  // re-open view modal for the saved recipe
+  setTimeout(()=>openModal(recipe.id),50);
+}
+
+function deleteRecipe(id){
+  if(!confirm('Delete this recipe? This cannot be undone.'))return;
+  S.recipes=S.recipes.filter(r=>r.id!==id);
+  persist();refreshTags();renderTagCloud();filter();
+  closeModal();closeForm();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+refreshTags();
+document.getElementById('view-cards').classList.add('active');
+renderTagCloud();filter();
+
+// ── Events ────────────────────────────────────────────────────────────────────
+let st;
+document.getElementById('search').addEventListener('input',e=>{clearTimeout(st);st=setTimeout(()=>{S.search=e.target.value.trim();filter();},180);});
+document.getElementById('view-cards').addEventListener('click',()=>{S.view='cards';document.getElementById('view-cards').classList.add('active');document.getElementById('view-table').classList.remove('active');filter();});
+document.getElementById('view-table').addEventListener('click',()=>{S.view='table';document.getElementById('view-table').classList.add('active');document.getElementById('view-cards').classList.remove('active');filter();});
+document.getElementById('btn-filters').addEventListener('click',()=>{S.panelOpen=!S.panelOpen;document.getElementById('filter-panel').classList.toggle('open',S.panelOpen);document.getElementById('btn-filters').classList.toggle('active',S.panelOpen);});
+document.getElementById('score-slider').addEventListener('input',e=>{S.minScore=parseFloat(e.target.value);document.getElementById('score-label').textContent=S.minScore>0?`Min: ${S.minScore.toFixed(1)}★`:'Any';filter();});
+document.getElementById('score-max-slider').addEventListener('input',e=>{S.maxScore=parseFloat(e.target.value);document.getElementById('score-max-label').textContent=S.maxScore<5?`Max: ${S.maxScore.toFixed(1)}★`:'Max: 5★';filter();});
+document.getElementById('time-slider').addEventListener('input',e=>{S.maxTime=parseInt(e.target.value);document.getElementById('time-label').textContent=S.maxTime>=480?'Any':`≤ ${fmt(S.maxTime)}`;filter();});
+document.getElementById('btn-clear').addEventListener('click',()=>{S.tags.clear();S.minScore=0;S.maxScore=5;S.maxTime=480;S.search='';document.getElementById('search').value='';document.getElementById('score-slider').value=0;document.getElementById('score-label').textContent='Any';document.getElementById('score-max-slider').value=5;document.getElementById('score-max-label').textContent='Max: 5★';document.getElementById('time-slider').value=480;document.getElementById('time-label').textContent='Any';renderTagCloud();filter();});
+document.getElementById('tag-cloud').addEventListener('click',e=>{const t=e.target.dataset.tag;if(!t)return;S.tags.has(t)?S.tags.delete(t):S.tags.add(t);renderTagCloud();filter();});
+document.getElementById('active-filters').addEventListener('click',e=>{const chip=e.target.closest('[data-rt],[data-rm]');if(!chip)return;if(chip.dataset.rt){S.tags.delete(chip.dataset.rt);renderTagCloud();}else{const k=chip.dataset.rm;if(k==='minScore'){S.minScore=0;document.getElementById('score-slider').value=0;document.getElementById('score-label').textContent='Any';}if(k==='maxScore'){S.maxScore=5;document.getElementById('score-max-slider').value=5;document.getElementById('score-max-label').textContent='Max: 5★';}if(k==='maxTime'){S.maxTime=480;document.getElementById('time-slider').value=480;document.getElementById('time-label').textContent='Any';}if(k==='search'){S.search='';document.getElementById('search').value='';}}filter();});
+
+document.getElementById('btn-new').addEventListener('click',()=>openForm());
+
+document.getElementById('content-area').addEventListener('click',e=>{
+  if(e.target.id==='link-new'){e.preventDefault();openForm();return;}
+  const t=e.target.dataset.qt;
+  if(t){e.stopPropagation();S.tags.has(t)?S.tags.delete(t):S.tags.add(t);if(!S.panelOpen){S.panelOpen=true;document.getElementById('filter-panel').classList.add('open');document.getElementById('btn-filters').classList.add('active');}renderTagCloud();filter();return;}
+  const th=e.target.closest('[data-sort]');
+  if(th){S.sortBy===th.dataset.sort?S.sortDir*=-1:(S.sortBy=th.dataset.sort,S.sortDir=1);filter();return;}
+  const card=e.target.closest('[data-id]');if(card)openModal(card.dataset.id);
+});
+
+document.getElementById('modal-overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('modal-overlay'))closeModal();
+  const editBtn=e.target.closest('[data-edit]');
+  if(editBtn){const r=S.recipes.find(x=>x.id===editBtn.dataset.edit);if(r)openForm(r);}
+});
+
+document.getElementById('form-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('form-overlay'))closeForm();});
+document.getElementById('form-close').addEventListener('click',closeForm);
+document.getElementById('btn-cancel').addEventListener('click',closeForm);
+document.getElementById('btn-save').addEventListener('click',saveForm);
+document.getElementById('btn-delete').addEventListener('click',()=>deleteRecipe(editingId));
+document.getElementById('add-ingredient').addEventListener('click',()=>addDynItem('f-ingredients','',false));
+document.getElementById('add-step').addEventListener('click',()=>addDynItem('f-steps','',true));
+document.getElementById('f-score').addEventListener('input',e=>{document.getElementById('f-score-val').textContent=parseFloat(e.target.value).toFixed(1);});
+document.getElementById('f-tag-selector').addEventListener('click',e=>{
+  const t=e.target.dataset.ftag;if(!t)return;
+  formTags.has(t)?formTags.delete(t):formTags.add(t);
+  renderFormTags(getFormAllTags());
+});
+document.getElementById('f-add-tag').addEventListener('click',()=>{
+  const inp=document.getElementById('f-custom-tag');
+  const v=inp.value.trim();if(!v)return;
+  formTags.add(v);inp.value='';
+  renderFormTags(getFormAllTags());
+});
+document.getElementById('f-custom-tag').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('f-add-tag').click();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeForm();closeModal();}});
+</script>
 </body>
 </html>
