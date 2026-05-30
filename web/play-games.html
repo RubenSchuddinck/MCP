@@ -287,38 +287,42 @@ function newGame(gameId) {
 function switchGame(gameId) {
   currentGame = gameId;
   currentInput = '';
-  document.querySelectorAll('[data-game]').forEach(el => el.classList.remove('active'));
-  document.querySelector(`[data-game="${gameId}"]`).classList.add('active');
+  document.querySelectorAll('.game-section').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.game-section[data-game="${gameId}"]`).classList.add('active');
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelector(`[data-game="${gameId}"]`).previousElementSibling?.classList.add('active');
   document.querySelector(`.tab-btn[data-game="${gameId}"]`).classList.add('active');
   renderBoard(gameId);
   renderKeyboard(gameId);
 }
 
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => switchGame(btn.dataset.game));
+// Init - Run after DOM is ready
+window.addEventListener('DOMContentLoaded', () => {
+  renderBoard('wordle');
+  renderKeyboard('wordle');
+  renderBoard('horsle');
+  renderKeyboard('horsle');
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchGame(btn.dataset.game));
+  });
+
+  document.addEventListener('keydown', e => {
+    if (!currentGame) return;
+    const engine = engines[currentGame];
+    if (engine.gameOver && e.key !== 'Escape') return;
+
+    if (e.key === 'Backspace') {
+      handleKey('BACKSPACE', currentGame);
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
+      handleKey('ENTER', currentGame);
+      e.preventDefault();
+    } else if (/^[a-z]$/i.test(e.key)) {
+      handleKey(e.key.toUpperCase(), currentGame);
+      e.preventDefault();
+    }
+  });
 });
-
-document.addEventListener('keydown', e => {
-  if (!currentGame) return;
-  const engine = engines[currentGame];
-  if (engine.gameOver && e.key !== 'Escape') return;
-
-  if (e.key === 'Backspace') {
-    handleKey('BACKSPACE', currentGame);
-  } else if (e.key === 'Enter') {
-    handleKey('ENTER', currentGame);
-  } else if (/^[a-z]$/.test(e.key)) {
-    handleKey(e.key.toUpperCase(), currentGame);
-  }
-});
-
-// Init
-renderBoard('wordle');
-renderKeyboard('wordle');
-renderBoard('horsle');
-renderKeyboard('horsle');
 </script>
 </body>
 </html>
