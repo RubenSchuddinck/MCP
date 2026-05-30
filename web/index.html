@@ -70,8 +70,9 @@
     .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
     .recipe-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; cursor: pointer; border: 1.5px solid var(--border); transition: transform var(--transition), box-shadow var(--transition); display: flex; flex-direction: column; }
     .recipe-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
-    .card-hero { height: 140px; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; position: relative; flex-shrink: 0; }
+    .card-hero { height: 140px; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; position: relative; flex-shrink: 0; overflow: hidden; }
     .card-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,.08)); }
+    .card-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     .card-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
     .card-title { font-size: 15px; font-weight: 700; line-height: 1.3; }
     .card-desc { font-size: 13px; color: var(--text-2); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -269,6 +270,10 @@
         <label>Description</label>
         <textarea id="f-desc" rows="2" placeholder="A short, enticing description…"></textarea>
       </div></div>
+      <div class="form-row full"><div class="field">
+        <label>Image URL <span class="field-hint">(optional — paste a direct image link)</span></label>
+        <input id="f-image" type="url" placeholder="https://…" />
+      </div></div>
 
       <div class="field">
         <label>Tags</label>
@@ -377,7 +382,7 @@ function filter(){
 // ── Render: content ───────────────────────────────────────────────────────────
 function renderCards(){
   if(!S.filtered.length)return`<div class="empty-state"><div class="empty-icon">🔍</div><h3>No recipes found</h3><p>Try adjusting your filters or <a href="#" id="link-new" style="color:var(--primary)">add a new recipe</a>.</p></div>`;
-  return`<div class="cards-grid">${S.filtered.map(r=>`<div class="recipe-card" data-id="${r.id}"><div class="card-hero" style="background:${grad(r.tags)}">${emoji(r.tags)}</div><div class="card-body"><div class="card-title">${r.name}</div><div class="card-desc">${r.description}</div><div class="card-tags">${r.tags.map(t=>pill(t)).join('')}</div></div><div class="card-footer"><div class="card-score">${stars(r.score)} ${r.score.toFixed(1)}</div><div class="card-time">⏱ ${fmt(r.totalTime)}</div><span class="difficulty-badge ${dc(r.difficulty)}">${r.difficulty}</span></div></div>`).join('')}</div>`;
+  return`<div class="cards-grid">${S.filtered.map(r=>`<div class="recipe-card" data-id="${r.id}"><div class="card-hero" style="background:${grad(r.tags)}">${r.image?`<img src="${r.image}" alt="${r.name}" loading="lazy">`:''}${r.image?'':emoji(r.tags)}</div><div class="card-body"><div class="card-title">${r.name}</div><div class="card-desc">${r.description}</div><div class="card-tags">${r.tags.map(t=>pill(t)).join('')}</div></div><div class="card-footer"><div class="card-score">${stars(r.score)} ${r.score.toFixed(1)}</div><div class="card-time">⏱ ${fmt(r.totalTime)}</div><span class="difficulty-badge ${dc(r.difficulty)}">${r.difficulty}</span></div></div>`).join('')}</div>`;
 }
 function renderTable(){
   if(!S.filtered.length)return`<div class="empty-state"><div class="empty-icon">🔍</div><h3>No recipes found</h3><p>Try adjusting your filters.</p></div>`;
@@ -406,7 +411,7 @@ function openModal(id){
   const r=S.recipes.find(x=>x.id===id);if(!r)return;
   document.getElementById('modal-box').innerHTML=`
     <div class="modal-header">
-      <div class="modal-hero-icon">${emoji(r.tags)}</div>
+      <div class="modal-hero-icon">${r.image?`<img src="${r.image}" alt="${r.name}" style="width:64px;height:64px;object-fit:cover;border-radius:10px;">`:emoji(r.tags)}</div>
       <div class="modal-header-info">
         <div class="modal-title">${r.name}</div>
         <div class="modal-tags">${r.tags.map(t=>pill(t,false)).join('')}</div>
@@ -478,6 +483,7 @@ function openForm(recipe=null){
   // Fill fields
   document.getElementById('f-name').value=recipe?recipe.name:'';
   document.getElementById('f-desc').value=recipe?recipe.description:'';
+  document.getElementById('f-image').value=recipe?recipe.image||''  :'';
   document.getElementById('f-score').value=recipe?recipe.score:4.0;
   document.getElementById('f-score-val').textContent=recipe?recipe.score.toFixed(1):'4.0';
   document.getElementById('f-servings').value=recipe?recipe.servings:4;
@@ -511,6 +517,7 @@ async function saveForm(){
     id:editingId||uid(),
     name,
     description:document.getElementById('f-desc').value.trim(),
+    image:document.getElementById('f-image').value.trim()||undefined,
     tags:[...formTags],
     score:parseFloat(document.getElementById('f-score').value),
     prepTime:prep,cookTime:cook,totalTime:prep+cook,
