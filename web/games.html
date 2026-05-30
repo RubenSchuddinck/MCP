@@ -170,14 +170,16 @@ const GAMES = [
 ];
 
 // ── API ───────────────────────────────────────────────────────────────────────
+const BASE = window.location.pathname.replace(/\/(games\.html)?\/?$/, '') + '/';
+
 async function loadData() {
-  const r = await fetch('/api/games');
+  const r = await fetch(BASE + 'api/games');
   if (!r.ok) throw new Error('Failed to load');
   return r.json();
 }
 
 async function saveData(d) {
-  const r = await fetch('/api/games', {
+  const r = await fetch(BASE + 'api/games', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(d),
