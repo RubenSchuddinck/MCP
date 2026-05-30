@@ -13,13 +13,6 @@
       "port": 8080,
       "domain": "rubenplex.duckdns.org",
       "path": "/app1"
-    },
-    {
-      "name": "events",
-      "entry": "web/events-server.mjs",
-      "port": 8088,
-      "domain": "rubenplex.duckdns.org",
-      "path": "/events"
     }
   ]
 }
