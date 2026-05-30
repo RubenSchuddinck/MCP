@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freezer Inventory</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #0f1923; color: #e0e8f0; min-height: 100vh; padding: 24px 16px; }
+  h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 24px; color: #7dd3fc; letter-spacing: -0.02em; }
+  h1 span { font-size: 1.2rem; }
+
+  .add-form {
+    background: #1a2637;
+    border: 1px solid #2a3f5a;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 28px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+  .add-form label { display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .add-form input {
+    background: #0f1923;
+    border: 1px solid #2a3f5a;
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: #e0e8f0;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .add-form input:focus { border-color: #7dd3fc; }
+  .add-form input::placeholder { color: #475569; }
+  button.add-btn {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  button.add-btn:hover { background: #1d4ed8; }
+  button.add-btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+
+  .stats { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stat {
+    background: #1a2637;
+    border: 1px solid #2a3f5a;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    color: #94a3b8;
+  }
+  .stat strong { color: #e0e8f0; font-size: 1.1rem; display: block; }
+
+  .list { display: flex; flex-direction: column; gap: 8px; }
+
+  .item {
+    background: #1a2637;
+    border: 1px solid #2a3f5a;
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    transition: border-color 0.15s;
+  }
+  .item.fresh { border-left: 3px solid #22c55e; }
+  .item.almost-spoiled { border-left: 3px solid #f59e0b; background: #1e2013; }
+  .item.expired { border-left: 3px solid #ef4444; background: #1e1313; }
+  .item.no-expiry { border-left: 3px solid #475569; }
+
+  .item-name { font-size: 1rem; font-weight: 600; color: #e0e8f0; }
+  .item-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .meta-tag {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    background: #0f1923;
+    border-radius: 5px;
+    padding: 2px 7px;
+  }
+  .meta-tag.portions { color: #7dd3fc; }
+
+  .badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 3px 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  .badge.fresh { background: #14532d; color: #4ade80; }
+  .badge.almost-spoiled { background: #451a03; color: #fbbf24; }
+  .badge.expired { background: #450a0a; color: #f87171; }
+  .badge.no-expiry { background: #1e293b; color: #64748b; }
+
+  button.del-btn {
+    background: transparent;
+    border: 1px solid #2a3f5a;
+    border-radius: 7px;
+    color: #64748b;
+    font-size: 1rem;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  button.del-btn:hover { border-color: #ef4444; color: #ef4444; }
+
+  .empty { text-align: center; color: #475569; padding: 48px 0; font-size: 1rem; }
+
+  @media (max-width: 600px) {
+    .add-form { grid-template-columns: 1fr; }
+    .item { grid-template-columns: 1fr auto; }
+    .badge { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🧊 Freezer Inventory</h1>
+
+<div class="add-form">
+  <label>
+    Item name
+    <input id="inp-name" type="text" placeholder="e.g. Chicken breasts" autocomplete="off">
+  </label>
+  <label>
+    Portions
+    <input id="inp-portions" type="number" min="1" value="1" placeholder="1">
+  </label>
+  <label>
+    Expires in (days)
+    <input id="inp-expires" type="number" min="1" placeholder="optional">
+  </label>
+  <button class="add-btn" id="btn-add" onclick="addItem()">Add to freezer</button>
+</div>
+
+<div class="stats" id="stats"></div>
+<div class="list" id="list"></div>
+
+<script>
+  const API = '/freezer/api/freezer';
+
+  async function load() {
+    const res = await fetch(API);
+    const items = await res.json();
+    render(items);
+  }
+
+  function statusLabel(status) {
+    if (status === 'fresh') return 'Fresh';
+    if (status === 'almost-spoiled') return '⚠ Almost Spoiled';
+    if (status === 'expired') return '✗ Expired';
+    return 'No expiry';
+  }
+
+  function render(items) {
+    const stats = document.getElementById('stats');
+    const list = document.getElementById('list');
+
+    const total = items.length;
+    const totalPortions = items.reduce((s, i) => s + (i.portions || 1), 0);
+    const almostSpoiled = items.filter(i => i.status === 'almost-spoiled').length;
+    const expired = items.filter(i => i.status === 'expired').length;
+
+    stats.innerHTML = `
+      <div class="stat"><strong>${total}</strong>Items</div>
+      <div class="stat"><strong>${totalPortions}</strong>Portions</div>
+      ${almostSpoiled ? `<div class="stat" style="border-color:#f59e0b"><strong style="color:#fbbf24">${almostSpoiled}</strong>Almost Spoiled</div>` : ''}
+      ${expired ? `<div class="stat" style="border-color:#ef4444"><strong style="color:#f87171">${expired}</strong>Expired</div>` : ''}
+    `;
+
+    if (!items.length) {
+      list.innerHTML = '<div class="empty">Your freezer is empty. Add something above!</div>';
+      return;
+    }
+
+    list.innerHTML = items.map(item => {
+      const added = new Date(item.addedAt);
+      const daysSince = Math.floor((Date.now() - added.getTime()) / 86400000);
+      const addedStr = added.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+      const expiryTag = item.expiresInDays
+        ? item.remaining <= 0
+          ? `<span class="meta-tag" style="color:#f87171">expired ${Math.abs(item.remaining)}d ago</span>`
+          : `<span class="meta-tag">${item.remaining}d remaining</span>`
+        : '';
+
+      return `
+        <div class="item ${item.status}">
+          <div>
+            <div class="item-name">${escHtml(item.name)}</div>
+            <div class="item-meta">
+              <span class="meta-tag portions">${item.portions || 1} portion${(item.portions || 1) !== 1 ? 's' : ''}</span>
+              <span class="meta-tag">Added ${addedStr}</span>
+              <span class="meta-tag">${daysSince}d in freezer</span>
+              ${expiryTag}
+            </div>
+          </div>
+          <span class="badge ${item.status}">${statusLabel(item.status)}</span>
+          <button class="del-btn" onclick="deleteItem('${item.id}')" title="Remove">✕</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function addItem() {
+    const name = document.getElementById('inp-name').value.trim();
+    const portions = parseInt(document.getElementById('inp-portions').value) || 1;
+    const expiresRaw = document.getElementById('inp-expires').value.trim();
+    if (!name) { document.getElementById('inp-name').focus(); return; }
+
+    const btn = document.getElementById('btn-add');
+    btn.disabled = true;
+
+    const body = { name, portions };
+    if (expiresRaw) body.expiresInDays = parseInt(expiresRaw);
+
+    await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+    document.getElementById('inp-name').value = '';
+    document.getElementById('inp-portions').value = '1';
+    document.getElementById('inp-expires').value = '';
+    btn.disabled = false;
+    load();
+  }
+
+  async function deleteItem(id) {
+    await fetch(`${API}/${id}`, { method: 'DELETE' });
+    load();
+  }
+
+  document.getElementById('inp-name').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+
+  load();
+</script>
+</body>
+</html>

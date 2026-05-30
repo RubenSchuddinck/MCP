@@ -38,6 +38,53 @@ function safeWebPath(rel: string): string {
   return target;
 }
 
+const FREEZER_DB = join(WEB_DIR, "data", "freezer.json");
+
+type FreezerItem = {
+  id: string;
+  name: string;
+  addedAt: string;
+  portions: number;
+  expiresInDays?: number;
+};
+
+async function readFreezerDB(): Promise<{ items: FreezerItem[] }> {
+  try {
+    const parsed = JSON.parse(await readFile(FREEZER_DB, "utf8"));
+    return { items: parsed.items ?? [] };
+  } catch {
+    return { items: [] };
+  }
+}
+
+async function writeFreezerDB(db: { items: FreezerItem[] }): Promise<void> {
+  await writeFile(FREEZER_DB, JSON.stringify({ items: db.items }, null, 2));
+}
+
+function freezerItemStatus(item: FreezerItem): { status: string; remaining: number | null } {
+  if (!item.expiresInDays) return { status: "no-expiry", remaining: null };
+  const daysSince = (Date.now() - new Date(item.addedAt).getTime()) / 86400000;
+  const remaining = item.expiresInDays - daysSince;
+  if (remaining <= 0) return { status: "expired", remaining: Math.floor(remaining) };
+  const threshold = Math.min(7, item.expiresInDays * 0.2);
+  if (remaining <= threshold) return { status: "almost-spoiled", remaining: Math.floor(remaining) };
+  return { status: "fresh", remaining: Math.floor(remaining) };
+}
+
+function formatFreezerItem(item: FreezerItem): string {
+  const { status, remaining } = freezerItemStatus(item);
+  const added = new Date(item.addedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const daysSince = Math.floor((Date.now() - new Date(item.addedAt).getTime()) / 86400000);
+  const portionStr = `${item.portions} portion${item.portions !== 1 ? "s" : ""}`;
+  const expiryStr = item.expiresInDays
+    ? remaining !== null && remaining <= 0
+      ? `, EXPIRED ${Math.abs(remaining)}d ago`
+      : `, ${remaining}d remaining of ${item.expiresInDays}d`
+    : ", no expiry set";
+  const statusEmoji = status === "fresh" ? "✅" : status === "almost-spoiled" ? "⚠️" : status === "expired" ? "❌" : "🔵";
+  return `${statusEmoji} ${item.name} — ${portionStr}, added ${added} (${daysSince}d ago)${expiryStr}`;
+}
+
 const REPO_DIR = resolve(__dirname, "..");
 const MANIFEST = join(REPO_DIR, "servers.json");
 const CADDYFILE = process.env.CADDYFILE || "/etc/caddy/Caddyfile";
@@ -368,6 +415,87 @@ function createServer() {
       return text(
         `Caddyfile updated with ${blocks.length} site(s) and reloaded (exit ${reload.code}).\n${reload.out}\n\n--- config ---\n${caddyfile}`
       );
+    }
+  );
+
+  server.registerTool(
+    "list_freezer_items",
+    {
+      description: "List all items currently in the freezer, with their status (fresh / almost-spoiled / expired), portions, date added, and days remaining.",
+      inputSchema: {},
+    },
+    async () => {
+      const db = await readFreezerDB();
+      if (!db.items.length) return text("The freezer is empty.");
+      const lines = db.items.map(formatFreezerItem);
+      const expiredCount = db.items.filter((i) => freezerItemStatus(i).status === "expired").length;
+      const almostCount = db.items.filter((i) => freezerItemStatus(i).status === "almost-spoiled").length;
+      const totalPortions = db.items.reduce((s, i) => s + i.portions, 0);
+      const summary = `${db.items.length} item(s), ${totalPortions} total portion(s)${almostCount ? `, ⚠️ ${almostCount} almost spoiled` : ""}${expiredCount ? `, ❌ ${expiredCount} expired` : ""}`;
+      return text(`${summary}\n\n${lines.join("\n")}`);
+    }
+  );
+
+  server.registerTool(
+    "add_freezer_item",
+    {
+      description: "Add an item to the freezer inventory.",
+      inputSchema: {
+        name: z.string().describe("Name of the item, e.g. 'Chicken breasts'"),
+        portions: z.number().optional().describe("Number of portions frozen (default 1)"),
+        expiresInDays: z.number().optional().describe("How many days the item lasts in the freezer (from today). Omit if unknown."),
+      },
+    },
+    async ({ name, portions, expiresInDays }) => {
+      const item: FreezerItem = {
+        id: randomUUID(),
+        name: name.trim(),
+        addedAt: new Date().toISOString(),
+        portions: portions ?? 1,
+        ...(expiresInDays != null ? { expiresInDays } : {}),
+      };
+      const db = await readFreezerDB();
+      db.items.push(item);
+      await writeFreezerDB(db);
+      return text(`Added: ${formatFreezerItem(item)}`);
+    }
+  );
+
+  server.registerTool(
+    "remove_freezer_item",
+    {
+      description: "Remove an item from the freezer by its ID or by name (case-insensitive, first match).",
+      inputSchema: {
+        query: z.string().describe("The item ID or item name to remove"),
+      },
+    },
+    async ({ query }) => {
+      const db = await readFreezerDB();
+      const q = query.trim();
+      let idx = db.items.findIndex((i) => i.id === q);
+      if (idx === -1) idx = db.items.findIndex((i) => i.name.toLowerCase() === q.toLowerCase());
+      if (idx === -1) return text(`No item found matching "${q}". Use list_freezer_items to see current items.`);
+      const [removed] = db.items.splice(idx, 1);
+      await writeFreezerDB(db);
+      return text(`Removed: ${removed.name} (${removed.portions} portion${removed.portions !== 1 ? "s" : ""})`);
+    }
+  );
+
+  server.registerTool(
+    "get_almost_spoiled_items",
+    {
+      description: "Get freezer items that are almost spoiled (≤7 days remaining or ≤20% of shelf life left) or already expired.",
+      inputSchema: {},
+    },
+    async () => {
+      const db = await readFreezerDB();
+      const flagged = db.items.filter((i) => {
+        const { status } = freezerItemStatus(i);
+        return status === "almost-spoiled" || status === "expired";
+      });
+      if (!flagged.length) return text("All freezer items are fresh (or have no expiry set). Nothing to worry about!");
+      const lines = flagged.map(formatFreezerItem);
+      return text(`${flagged.length} item(s) need attention:\n\n${lines.join("\n")}`);
     }
   );
 
