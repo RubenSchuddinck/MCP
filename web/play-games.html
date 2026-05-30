@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wordle & Horsle</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f6f1eb; --surface: #ffffff; --border: #e4ddd4;
+      --text: #1c1917; --text-2: #57534e; --text-3: #a8a29e;
+      --primary: #7c3aed; --primary-bg: #f5f3ff;
+      --radius: 14px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.10), 0 1px 3px rgba(0,0,0,.06);
+      --transition: 0.18s ease;
+      --green: #16a34a; --amber: #b45309; --gray: #6b7280;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .app-header { position: sticky; top: 0; z-index: 100; background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; box-shadow: var(--shadow); }
+    .header-content { max-width: 600px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; font-weight: 700; }
+    .brand-icon { font-size: 1.5rem; }
+    .game-tabs { display: flex; gap: 8px; }
+    .tab-btn { height: 36px; padding: 0 14px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--transition); color: var(--text-2); }
+    .tab-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .tab-btn:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+
+    .content { max-width: 400px; margin: 30px auto; padding: 20px; }
+    .game-section { display: none; }
+    .game-section.active { display: block; }
+
+    .board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 20px 0; }
+    .tile { width: 100%; aspect-ratio: 1; border: 2px solid var(--border); border-radius: 6px; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; justify-content: center; text-transform: uppercase; color: #fff; transition: all var(--transition); }
+    .tile.filled { border-color: var(--text-2); background: var(--text-2); }
+    .tile.correct { background: var(--green); border-color: var(--green); }
+    .tile.present { background: var(--amber); border-color: var(--amber); }
+    .tile.absent { background: var(--gray); border-color: var(--gray); }
+
+    .keyboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(30px, 1fr)); gap: 4px; margin: 20px 0; }
+    .key { height: 40px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); font-size: 11px; font-weight: 600; cursor: pointer; transition: all var(--transition); }
+    .key:hover { border-color: var(--primary); background: var(--primary-bg); }
+    .key.used { background: var(--gray); color: #fff; border-color: var(--gray); }
+    .key.correct { background: var(--green); color: #fff; border-color: var(--green); }
+
+    .message { text-align: center; margin: 16px 0; font-size: 14px; font-weight: 600; min-height: 20px; }
+    .message.success { color: var(--green); }
+    .message.error { color: #dc2626; }
+    .message.info { color: var(--text-3); }
+
+    .info-text { text-align: center; font-size: 13px; color: var(--text-3); margin-top: 20px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; border: none; border-radius: 8px; background: var(--primary); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: all var(--transition); }
+    .btn:hover { background: #6d28d9; }
+    .btn-wrap { text-align: center; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-content">
+    <div style="flex: 1;">
+      <div class="brand">
+        <span class="brand-icon" id="header-icon">📖</span>
+        <span id="header-title">Wordle</span>
+      </div>
+    </div>
+    <div class="game-tabs">
+      <button class="tab-btn active" data-game="wordle">📖 Wordle</button>
+      <button class="tab-btn" data-game="horsle">🐴 Horsle</button>
+    </div>
+  </div>
+</header>
+
+<div class="content">
+  <!-- Wordle -->
+  <div class="game-section active" data-game="wordle">
+    <div class="board" id="wordle-board"></div>
+    <div class="keyboard" id="wordle-keyboard"></div>
+    <div class="message" id="wordle-message"></div>
+    <div class="info-text" id="wordle-info"></div>
+    <div class="btn-wrap" id="wordle-btn-wrap"></div>
+  </div>
+
+  <!-- Horsle -->
+  <div class="game-section" data-game="horsle">
+    <div class="board" id="horsle-board"></div>
+    <div class="keyboard" id="horsle-keyboard"></div>
+    <div class="message" id="horsle-message"></div>
+    <div class="info-text" id="horsle-info"></div>
+    <div class="btn-wrap" id="horsle-btn-wrap"></div>
+  </div>
+</div>
+
+<script>
+const WORD_LIST = ['ABOUT','ABOVE','ABUSE','ADMIT','ADOPT','ADULT','AFTER','AGAIN','AGENT','AGREE','AHEAD','ALARM','ALBUM','ALERT','ALIEN','ALIGN','ALIKE','ALIVE','ALLOW','ALONE','ALONG','ALTER','ANGEL','ANGER','ANGLE','ANGRY','APART','APPLE','APPLY','ARENA','ARGUE','ARISE','ARRAY','ARROW','ASIDE','ASSET','ATLAS','ATTIC','AUDIO','AUDIT','AUNTY','AVOID','AWAKE','AWARD','AWARE','BADLY','BAGEL','BAKER','BASES','BASIC','BASIS','BEACH','BEGAN','BEGIN','BEING','BELOW','BENCH','BILLY','BINGE','BINGO','BIOME','BIRTH','BLACK','BLADE','BLAME','BLANK','BLAZE','BLEAK','BLEEP','BLEND','BLESS','BLIND','BLINK','BLISS','BLOCK','BLOOD','BLOOM','BLOWN','BLUES','BOARD','BOAST','BOOST','BOOTH','BOOZE','BOUND','BRACE','BRAIN','BRAND','BRAVE','BREAD','BREAK','BREED','BRICK','BRIDE','BRIEF','BRING','BRINK','BRISK','BROAD','BROKE','BROOD','BROOK','BROOM','BROTH','BROWN','BUILD','BUILT','BUNCH','BUNNY','BURST','BUSHY','BUYER'];
+const HORSE_LIST = ['ABOUT','ABOVE','AMPLE','ANKLE','BEAST','BLACK','BLADE','BLOOD','BOARD','BOOST','BOUND','BREED','BRICK','BROAD','BROKE','BROOM','BUILD','CANTER','CHASE','CHESTNUT','CLAMP','CLASP','COACH','CORAL','CREAM','CRISP','CROSS','CROWD','DERBY','DONKEY','DRAFT','DRANK','DRAWN','DREAM','DREAMY','DRENCH','DRINK','DROVE','DROWN','EAGER','EARLY','EARTH','EQUINE','FAVOR','FEAST','FENCE','FILLY','FINAL','FLAIR','FLANK','FLASH','FLOAT','FLOCK','FLOOD','FLORA','FLOUR','FLOWN','FLUID','FOAL','FOCUS','FORGE','FORTE','FORUM','FOUND','FRAME','FRANK','FRAUD','FREAK','FRESH','FRIED','FRIEND','FRIGHT','FRIZZ','FRONT','FROST','FROTH','FROWN','FROZE','FRUIT','FULLY','FUNKY','FUNNY','FUZZY','GALA','GAMER','GIANT','GIDDY','GLADE','GLAND','GLASS','GLAZE','GLEAM','GLEAN','GLIDE','GLOBE','GLOOM','GLORY','GLOSS','GLOVE','GRACE','GRADE','GRAIN','GRAMS','GRAND','GRANT','GRAPE','GRASS','GRATE','GRAVE','GRAZE','GREAT','GREED','GREEN','GREET','GRIEF','GRILL','GRIME','GRIND','GRINDY','GROAN','GROOM','GROSS','GROUP','GROVE','GROW','GRUEL','GRUNT','GUARD','GUAVA','GUESS','GUEST','GUIDE','GUILD','GUILT','GUITAR'];
+
+class GameEngine {
+  constructor(wordList, gameId) {
+    this.wordList = wordList;
+    this.gameId = gameId;
+    this.answer = this.getAnswer();
+    this.guesses = [];
+    this.gameOver = false;
+    this.won = false;
+  }
+
+  getAnswer() {
+    const today = new Date().toISOString().slice(0, 10);
+    const seed = today.split('-').reduce((a, b) => a + parseInt(b), 0);
+    return this.wordList[seed % this.wordList.length];
+  }
+
+  guess(word) {
+    word = word.toUpperCase();
+    if (word.length !== 5) return { error: 'Word must be 5 letters' };
+    if (!this.wordList.includes(word)) return { error: 'Word not in list' };
+    if (this.guesses.includes(word)) return { error: 'Already guessed' };
+
+    this.guesses.push(word);
+    if (word === this.answer) {
+      this.gameOver = true;
+      this.won = true;
+      return { tiles: this.scoreTiles(word), gameOver: true, won: true };
+    }
+    if (this.guesses.length === 6) {
+      this.gameOver = true;
+      return { tiles: this.scoreTiles(word), gameOver: true, won: false, answer: this.answer };
+    }
+    return { tiles: this.scoreTiles(word) };
+  }
+
+  scoreTiles(word) {
+    const tiles = [];
+    const answerChars = this.answer.split('');
+    const wordChars = word.split('');
+    const used = [false, false, false, false, false];
+
+    // First pass: mark correct
+    for (let i = 0; i < 5; i++) {
+      if (wordChars[i] === answerChars[i]) {
+        tiles[i] = 'correct';
+        used[i] = true;
+      }
+    }
+
+    // Second pass: mark present or absent
+    for (let i = 0; i < 5; i++) {
+      if (tiles[i]) continue;
+      const char = wordChars[i];
+      let found = false;
+      for (let j = 0; j < 5; j++) {
+        if (!used[j] && answerChars[j] === char) {
+          tiles[i] = 'present';
+          used[j] = true;
+          found = true;
+          break;
+        }
+      }
+      if (!found) tiles[i] = 'absent';
+    }
+    return tiles;
+  }
+}
+
+let engines = {
+  wordle: new GameEngine(WORD_LIST, 'wordle'),
+  horsle: new GameEngine(HORSE_LIST, 'horsle'),
+};
+
+let currentGame = 'wordle';
+let currentInput = '';
+
+function renderBoard(gameId) {
+  const engine = engines[gameId];
+  const boardEl = document.getElementById(`${gameId}-board`);
+  boardEl.innerHTML = '';
+
+  for (let i = 0; i < 6; i++) {
+    for (let j = 0; j < 5; j++) {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      if (i < engine.guesses.length) {
+        const word = engine.guesses[i];
+        const tiles = engine.scoreTiles(word);
+        tile.textContent = word[j];
+        tile.classList.add('filled', tiles[j]);
+      } else if (i === engine.guesses.length && currentGame === gameId) {
+        if (j < currentInput.length) {
+          tile.textContent = currentInput[j];
+          tile.classList.add('filled');
+        }
+      }
+      boardEl.appendChild(tile);
+    }
+  }
+}
+
+function renderKeyboard(gameId) {
+  const engine = engines[gameId];
+  const keys = 'QWERTYUIOPASDFGHJKLZXCVBNM'.split('');
+  const kbEl = document.getElementById(`${gameId}-keyboard`);
+  kbEl.innerHTML = '';
+
+  keys.forEach(key => {
+    const btn = document.createElement('button');
+    btn.textContent = key;
+    btn.className = 'key';
+
+    // Check status
+    for (const guess of engine.guesses) {
+      const tiles = engine.scoreTiles(guess);
+      guess.split('').forEach((char, i) => {
+        if (char === key) {
+          if (tiles[i] === 'correct') btn.classList.add('correct');
+          else if (tiles[i] !== 'absent' && !btn.classList.contains('correct')) btn.classList.add('used');
+          else if (!btn.classList.contains('correct') && !btn.classList.contains('used')) btn.classList.add('used');
+        }
+      });
+    }
+
+    btn.onclick = () => handleKey(key, gameId);
+    kbEl.appendChild(btn);
+  });
+}
+
+function handleKey(key, gameId) {
+  if (gameId !== currentGame) return;
+  const engine = engines[gameId];
+  if (engine.gameOver) return;
+
+  if (key === 'ENTER') {
+    if (currentInput.length === 5) {
+      const result = engine.guess(currentInput);
+      if (result.error) {
+        showMessage(gameId, result.error, 'error');
+      } else {
+        currentInput = '';
+        renderBoard(gameId);
+        renderKeyboard(gameId);
+        if (result.gameOver) {
+          if (result.won) {
+            showMessage(gameId, `Won in ${engine.guesses.length}! 🎉`, 'success');
+          } else {
+            showMessage(gameId, `Game over! The word was ${result.answer}`, 'error');
+          }
+          showNewGameBtn(gameId);
+        }
+      }
+    }
+    return;
+  }
+
+  if (key === 'BACKSPACE') {
+    currentInput = currentInput.slice(0, -1);
+  } else if (currentInput.length < 5) {
+    currentInput += key;
+  }
+
+  renderBoard(gameId);
+}
+
+function showMessage(gameId, msg, type) {
+  const el = document.getElementById(`${gameId}-message`);
+  el.textContent = msg;
+  el.className = `message ${type}`;
+}
+
+function showNewGameBtn(gameId) {
+  const wrap = document.getElementById(`${gameId}-btn-wrap`);
+  wrap.innerHTML = '<button class="btn" onclick="newGame(\'' + gameId + '\')">New Game</button>';
+}
+
+function newGame(gameId) {
+  engines[gameId] = new GameEngine(
+    gameId === 'wordle' ? WORD_LIST : HORSE_LIST,
+    gameId
+  );
+  currentInput = '';
+  renderBoard(gameId);
+  renderKeyboard(gameId);
+  showMessage(gameId, '', 'info');
+  document.getElementById(`${gameId}-btn-wrap`).innerHTML = '';
+}
+
+function switchGame(gameId) {
+  currentGame = gameId;
+  currentInput = '';
+  document.querySelectorAll('[data-game]').forEach(el => el.classList.remove('active'));
+  document.querySelector(`[data-game="${gameId}"]`).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`[data-game="${gameId}"]`).previousElementSibling?.classList.add('active');
+  document.querySelector(`.tab-btn[data-game="${gameId}"]`).classList.add('active');
+  renderBoard(gameId);
+  renderKeyboard(gameId);
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchGame(btn.dataset.game));
+});
+
+document.addEventListener('keydown', e => {
+  if (!currentGame) return;
+  const engine = engines[currentGame];
+  if (engine.gameOver && e.key !== 'Escape') return;
+
+  if (e.key === 'Backspace') {
+    handleKey('BACKSPACE', currentGame);
+  } else if (e.key === 'Enter') {
+    handleKey('ENTER', currentGame);
+  } else if (/^[a-z]$/.test(e.key)) {
+    handleKey(e.key.toUpperCase(), currentGame);
+  }
+});
+
+// Init
+renderBoard('wordle');
+renderKeyboard('wordle');
+renderBoard('horsle');
+renderKeyboard('horsle');
+</script>
+</body>
+</html>
