@@ -37,6 +37,49 @@ function safeWebPath(rel: string): string {
 
 const FREEZER_DB = join(WEB_DIR, "data", "freezer.json");
 const RECIPES_DB = join(WEB_DIR, "data", "recipes.json");
+const EVENTS_DB  = join(WEB_DIR, "data", "events.json");
+
+type EventRecord = {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate?: string;
+  description?: string;
+  rating?: number;
+  review?: string;
+  tags?: string[];
+  intensity?: "chill" | "moderate" | "intense" | "wild";
+  vibes?: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+async function readEventsDB(): Promise<EventRecord[]> {
+  try {
+    const parsed = JSON.parse(await readFile(EVENTS_DB, "utf8"));
+    return parsed.events ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeEventsDB(events: EventRecord[]): Promise<void> {
+  await writeFile(EVENTS_DB, JSON.stringify({ events }, null, 2));
+}
+
+function formatEvent(e: EventRecord): string {
+  const today = new Date().toISOString().slice(0, 10);
+  const isPast = e.startDate < today;
+  const dateStr = e.endDate && e.endDate !== e.startDate
+    ? `${e.startDate} → ${e.endDate}`
+    : e.startDate;
+  const rating = e.rating != null ? ` ★${e.rating}/5` : "";
+  const intensity = e.intensity ? ` [${e.intensity}]` : "";
+  const tags = e.tags?.length ? ` | tags: ${e.tags.join(", ")}` : "";
+  const vibes = e.vibes?.length ? ` | vibes: ${e.vibes.join(", ")}` : "";
+  const review = e.review ? `\n  Review: ${e.review.slice(0, 120)}${e.review.length > 120 ? "…" : ""}` : "";
+  return `[${e.id}] ${e.name} (${isPast ? "past" : "upcoming"})${rating}${intensity}\n  ${dateStr}${tags}${vibes}${review}`;
+}
 
 type Recipe = {
   id: string;
@@ -783,6 +826,141 @@ function createServer() {
       const [removed] = recipes.splice(idx, 1);
       await writeRecipesDB(recipes);
       return text(`Removed: ${removed.name}`);
+    }
+  );
+
+  server.registerTool(
+    "add_event",
+    {
+      description: "Add a new event to the event tracker (past or future).",
+      inputSchema: {
+        name:        z.string().describe("Event name, e.g. 'Tomorrowland 2024'"),
+        startDate:   z.string().describe("Start date in YYYY-MM-DD format"),
+        endDate:     z.string().optional().describe("End date in YYYY-MM-DD format (omit for single-day events)"),
+        description: z.string().optional().describe("Short description or notes about the event"),
+        rating:      z.number().min(0).max(5).optional().describe("Personal rating 0–5 (omit for future events)"),
+        review:      z.string().optional().describe("Free-text review or impressions"),
+        tags:        z.array(z.string()).optional().describe("General tags, e.g. ['music', 'festival', 'belgium']"),
+        intensity:   z.enum(["chill", "moderate", "intense", "wild"]).optional().describe("Overall intensity / vibe level"),
+        vibes:       z.array(z.string()).optional().describe("Vibe descriptors, e.g. ['cozy', 'electric', 'rowdy']"),
+      },
+    },
+    async ({ name, startDate, endDate, description, rating, review, tags, intensity, vibes }) => {
+      const now = new Date().toISOString();
+      const event: EventRecord = {
+        id: randomUUID(),
+        name: name.trim(),
+        startDate,
+        ...(endDate && endDate !== startDate ? { endDate } : {}),
+        ...(description ? { description: description.trim() } : {}),
+        ...(rating != null ? { rating } : {}),
+        ...(review ? { review: review.trim() } : {}),
+        ...(tags?.length ? { tags } : {}),
+        ...(intensity ? { intensity } : {}),
+        ...(vibes?.length ? { vibes } : {}),
+        createdAt: now,
+        updatedAt: now,
+      };
+      const events = await readEventsDB();
+      events.push(event);
+      await writeEventsDB(events);
+      return text(`Added:\n\n${formatEvent(event)}`);
+    }
+  );
+
+  server.registerTool(
+    "get_event",
+    {
+      description: "Get full details of an event by its ID.",
+      inputSchema: {
+        id: z.string().describe("The event UUID"),
+      },
+    },
+    async ({ id }) => {
+      const events = await readEventsDB();
+      const event = events.find(e => e.id === id);
+      if (!event) return text(`No event found with id "${id}". Use list_events to see all.`);
+      return text(formatEvent(event));
+    }
+  );
+
+  server.registerTool(
+    "list_events",
+    {
+      description: "List events with optional filters. Returns all events by default.",
+      inputSchema: {
+        type:      z.enum(["past", "future"]).optional().describe("Filter to past or upcoming events only"),
+        tag:       z.string().optional().describe("Filter to events that have this tag"),
+        intensity: z.enum(["chill", "moderate", "intense", "wild"]).optional().describe("Filter by intensity level"),
+      },
+    },
+    async ({ type, tag, intensity }) => {
+      let events = await readEventsDB();
+      const today = new Date().toISOString().slice(0, 10);
+      if (type === "past") events = events.filter(e => e.startDate < today);
+      else if (type === "future") events = events.filter(e => e.startDate >= today);
+      if (tag) events = events.filter(e => e.tags?.some(t => t.toLowerCase() === tag.toLowerCase()));
+      if (intensity) events = events.filter(e => e.intensity === intensity);
+      if (!events.length) return text("No events match the given filters.");
+      const past = events.filter(e => e.startDate < today).sort((a, b) => b.startDate.localeCompare(a.startDate));
+      const future = events.filter(e => e.startDate >= today).sort((a, b) => a.startDate.localeCompare(b.startDate));
+      const sorted = [...past, ...future];
+      return text(`${sorted.length} event(s):\n\n${sorted.map(formatEvent).join("\n\n")}`);
+    }
+  );
+
+  server.registerTool(
+    "update_event",
+    {
+      description: "Update fields on an existing event. Only the fields you provide are changed.",
+      inputSchema: {
+        id:          z.string().describe("The event UUID to update"),
+        name:        z.string().optional().describe("New event name"),
+        startDate:   z.string().optional().describe("New start date (YYYY-MM-DD)"),
+        endDate:     z.string().optional().describe("New end date (YYYY-MM-DD), or empty string to clear"),
+        description: z.string().optional().describe("New description"),
+        rating:      z.number().min(0).max(5).optional().describe("New rating 0–5"),
+        review:      z.string().optional().describe("New review text"),
+        tags:        z.array(z.string()).optional().describe("Replace all tags"),
+        intensity:   z.enum(["chill", "moderate", "intense", "wild"]).optional().describe("New intensity level"),
+        vibes:       z.array(z.string()).optional().describe("Replace all vibe tags"),
+      },
+    },
+    async ({ id, name, startDate, endDate, description, rating, review, tags, intensity, vibes }) => {
+      const events = await readEventsDB();
+      const idx = events.findIndex(e => e.id === id);
+      if (idx === -1) return text(`No event found with id "${id}". Use list_events to see all.`);
+      const e = events[idx];
+      if (name != null)        e.name = name.trim();
+      if (startDate != null)   e.startDate = startDate;
+      if (endDate != null)     { if (endDate === "" || endDate === e.startDate) delete e.endDate; else e.endDate = endDate; }
+      if (description != null) { if (description.trim() === "") delete e.description; else e.description = description.trim(); }
+      if (rating != null)      e.rating = rating;
+      if (review != null)      { if (review.trim() === "") delete e.review; else e.review = review.trim(); }
+      if (tags != null)        { if (tags.length === 0) delete e.tags; else e.tags = tags; }
+      if (intensity != null)   e.intensity = intensity;
+      if (vibes != null)       { if (vibes.length === 0) delete e.vibes; else e.vibes = vibes; }
+      e.updatedAt = new Date().toISOString();
+      await writeEventsDB(events);
+      return text(`Updated:\n\n${formatEvent(e)}`);
+    }
+  );
+
+  server.registerTool(
+    "remove_event",
+    {
+      description: "Delete an event by its ID.",
+      inputSchema: {
+        id: z.string().describe("The event UUID to remove"),
+      },
+    },
+    async ({ id }) => {
+      const events = await readEventsDB();
+      const idx = events.findIndex(e => e.id === id);
+      if (idx === -1) return text(`No event found with id "${id}". Use list_events to see all.`);
+      const [removed] = events.splice(idx, 1);
+      await writeEventsDB(events);
+      return text(`Removed: ${removed.name} (${removed.startDate})`);
     }
   );
 

@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Events</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0a0f16;
+    --surface:   #0f1820;
+    --surface-2: #141f2e;
+    --border:    #1e2f45;
+    --border-2:  #253a56;
+    --text:      #dce8f5;
+    --text-2:    #7a98b8;
+    --text-3:    #3d566e;
+    --blue:      #4d9de0;
+    --green:     #3dba78;
+    --amber:     #e8a020;
+    --red:       #e05555;
+    --purple:    #9b7fe8;
+    --radius:    10px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  body.sidebar-open { overflow: hidden; }
+
+  /* ── Header ── */
+  .page-header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+  .header-left { display: flex; align-items: baseline; gap: 14px; }
+  .page-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--blue);
+  }
+  .page-sub { font-size: 0.72rem; color: var(--text-3); letter-spacing: 0.04em; }
+
+  .btn-add {
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 7px 16px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+  .btn-add:hover { opacity: 0.85; }
+
+  /* ── Filter bar ── */
+  .filter-bar {
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .filter-group { display: flex; gap: 4px; }
+  .filter-divider { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+
+  .filter-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-2);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .filter-btn:hover { border-color: var(--border-2); color: var(--text); }
+  .filter-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  .filter-pill {
+    border: 1px solid transparent;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-transform: uppercase;
+    background: var(--surface);
+  }
+  .filter-pill.chill    { color: var(--green); border-color: color-mix(in srgb, var(--green) 30%, transparent); }
+  .filter-pill.moderate { color: var(--blue);  border-color: color-mix(in srgb, var(--blue)  30%, transparent); }
+  .filter-pill.intense  { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 30%, transparent); }
+  .filter-pill.wild     { color: var(--red);   border-color: color-mix(in srgb, var(--red)   30%, transparent); }
+
+  .filter-pill.active.chill    { background: color-mix(in srgb, var(--green) 18%, transparent); }
+  .filter-pill.active.moderate { background: color-mix(in srgb, var(--blue)  18%, transparent); }
+  .filter-pill.active.intense  { background: color-mix(in srgb, var(--amber) 18%, transparent); }
+  .filter-pill.active.wild     { background: color-mix(in srgb, var(--red)   18%, transparent); }
+
+  .filter-tag {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-2);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .filter-tag:hover { border-color: var(--blue); color: var(--blue); }
+  .filter-tag.active { background: color-mix(in srgb, var(--blue) 15%, transparent); border-color: var(--blue); color: var(--blue); }
+
+  .filter-clear {
+    background: transparent;
+    border: none;
+    color: var(--text-3);
+    font-size: 0.72rem;
+    cursor: pointer;
+    padding: 4px 6px;
+    margin-left: auto;
+    transition: color 0.12s;
+  }
+  .filter-clear:hover { color: var(--red); }
+
+  /* ── Main layout ── */
+  .main { padding: 24px; max-width: 1200px; }
+
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  @media (max-width: 720px) {
+    .columns { grid-template-columns: 1fr; }
+  }
+
+  .col-header {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .past-col .col-header { color: var(--text-3); }
+  .future-col .col-header { color: color-mix(in srgb, var(--blue) 60%, var(--text-3)); }
+
+  .col-events { display: flex; flex-direction: column; gap: 10px; }
+  .empty-col { color: var(--text-3); font-size: 0.82rem; padding: 16px 0; font-style: italic; }
+
+  .single-col { max-width: 680px; }
+  .single-col .col-events { gap: 10px; }
+
+  /* ── Event card ── */
+  .event-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--border);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    position: relative;
+  }
+  .event-card:hover { background: var(--surface-2); transform: translateY(-1px); }
+  .event-card.intensity-chill    { border-left-color: var(--green); }
+  .event-card.intensity-moderate { border-left-color: var(--blue); }
+  .event-card.intensity-intense  { border-left-color: var(--amber); }
+  .event-card.intensity-wild     { border-left-color: var(--red); }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .card-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .card-date {
+    font-size: 0.7rem;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .card-badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .badge-upcoming { background: color-mix(in srgb, var(--blue) 15%, transparent); color: var(--blue); }
+  .badge-chill    { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+  .badge-moderate { background: color-mix(in srgb, var(--blue)  15%, transparent); color: var(--blue); }
+  .badge-intense  { background: color-mix(in srgb, var(--amber) 15%, transparent); color: var(--amber); }
+  .badge-wild     { background: color-mix(in srgb, var(--red)   15%, transparent); color: var(--red); }
+
+  .card-rating { font-size: 0.8rem; color: var(--amber); letter-spacing: -1px; }
+  .card-rating .empty { color: var(--border-2); }
+
+  .card-countdown {
+    font-size: 0.7rem;
+    color: var(--text-3);
+    margin-bottom: 4px;
+  }
+
+  .card-review {
+    font-size: 0.8rem;
+    color: var(--text-2);
+    line-height: 1.45;
+    margin: 6px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .chip {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--surface-2);
+    color: var(--text-3);
+    border: 1px solid var(--border);
+  }
+  .chip.vibe {
+    background: color-mix(in srgb, var(--purple) 10%, transparent);
+    color: color-mix(in srgb, var(--purple) 80%, var(--text));
+    border-color: color-mix(in srgb, var(--purple) 25%, transparent);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .sidebar-overlay.visible { opacity: 1; pointer-events: auto; }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: 380px;
+    max-width: 100vw;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 51;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  .sidebar-header {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .sidebar-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-2);
+  }
+  .sidebar-close {
+    background: transparent;
+    border: none;
+    color: var(--text-3);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 5px;
+    transition: color 0.12s, background 0.12s;
+  }
+  .sidebar-close:hover { color: var(--text); background: var(--surface-2); }
+
+  .sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .field input, .field textarea, .field select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 11px;
+    color: var(--text);
+    font-size: 0.86rem;
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+    width: 100%;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--blue); }
+  .field input::placeholder, .field textarea::placeholder { color: var(--text-3); }
+  .field textarea { resize: vertical; min-height: 70px; }
+
+  /* Star rating */
+  .stars-input {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .star-btn {
+    font-size: 1.4rem;
+    color: var(--border-2);
+    cursor: pointer;
+    transition: color 0.1s, transform 0.1s;
+    user-select: none;
+    line-height: 1;
+  }
+  .star-btn.on { color: var(--amber); }
+  .star-btn:hover { transform: scale(1.15); }
+  .star-clear {
+    font-size: 0.75rem;
+    color: var(--text-3);
+    cursor: pointer;
+    margin-left: 6px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.12s, background 0.12s;
+  }
+  .star-clear:hover { color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); }
+
+  /* Intensity segmented control */
+  .intensity-control {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .intensity-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-3);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 4px;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+  }
+  .intensity-btn:hover { border-color: var(--border-2); color: var(--text-2); }
+  .intensity-btn.active-chill    { background: color-mix(in srgb, var(--green) 15%, transparent); border-color: var(--green); color: var(--green); }
+  .intensity-btn.active-moderate { background: color-mix(in srgb, var(--blue)  15%, transparent); border-color: var(--blue);  color: var(--blue); }
+  .intensity-btn.active-intense  { background: color-mix(in srgb, var(--amber) 15%, transparent); border-color: var(--amber); color: var(--amber); }
+  .intensity-btn.active-wild     { background: color-mix(in srgb, var(--red)   15%, transparent); border-color: var(--red);   color: var(--red); }
+
+  /* Chip input preview */
+  .chip-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 5px;
+    min-height: 22px;
+  }
+
+  /* Sidebar footer */
+  .sidebar-footer {
+    border-top: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .btn-save {
+    flex: 1;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 9px 16px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-save:hover { opacity: 0.85; }
+  .btn-delete {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--red);
+    font-size: 0.84rem;
+    font-weight: 600;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-delete:hover { background: color-mix(in srgb, var(--red) 10%, transparent); border-color: var(--red); }
+  .btn-cancel {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text-3);
+    font-size: 0.84rem;
+    font-weight: 600;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-cancel:hover { border-color: var(--border-2); color: var(--text-2); }
+
+  /* Loading / error states */
+  .state-msg {
+    padding: 32px 24px;
+    color: var(--text-3);
+    font-size: 0.85rem;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="header-left">
+    <span class="page-title">Events</span>
+    <span class="page-sub" id="pageSub"></span>
+  </div>
+  <button class="btn-add" onclick="openSidebar(null)">+ Add Event</button>
+</header>
+
+<div class="filter-bar">
+  <div class="filter-group">
+    <button class="filter-btn active" id="ftAll"    onclick="setTypeFilter('all')">All</button>
+    <button class="filter-btn"        id="ftPast"   onclick="setTypeFilter('past')">Past</button>
+    <button class="filter-btn"        id="ftFuture" onclick="setTypeFilter('future')">Upcoming</button>
+  </div>
+  <div class="filter-divider"></div>
+  <div class="filter-group" id="intensityGroup">
+    <button class="filter-pill chill"    id="ip-chill"    onclick="toggleIntensity('chill')">chill</button>
+    <button class="filter-pill moderate" id="ip-moderate" onclick="toggleIntensity('moderate')">moderate</button>
+    <button class="filter-pill intense"  id="ip-intense"  onclick="toggleIntensity('intense')">intense</button>
+    <button class="filter-pill wild"     id="ip-wild"     onclick="toggleIntensity('wild')">wild</button>
+  </div>
+  <div class="filter-divider" id="tagDivider" style="display:none"></div>
+  <div class="filter-group" id="tagGroup"></div>
+  <button class="filter-clear" id="clearBtn" onclick="clearFilters()" style="display:none">× Clear</button>
+</div>
+
+<main class="main">
+  <div class="columns" id="twoCol">
+    <div class="column past-col">
+      <div class="col-header">Past</div>
+      <div class="col-events" id="pastList"></div>
+      <div class="empty-col" id="pastEmpty" style="display:none">No past events yet</div>
+    </div>
+    <div class="column future-col">
+      <div class="col-header">Upcoming</div>
+      <div class="col-events" id="futureList"></div>
+      <div class="empty-col" id="futureEmpty" style="display:none">Nothing planned yet</div>
+    </div>
+  </div>
+  <div class="single-col" id="oneCol" style="display:none">
+    <div class="col-events" id="oneList"></div>
+    <div class="empty-col" id="oneEmpty" style="display:none">No events match these filters</div>
+  </div>
+</main>
+
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <span class="sidebar-title" id="sidebarTitle">Add Event</span>
+    <button class="sidebar-close" onclick="closeSidebar()">✕</button>
+  </div>
+  <div class="sidebar-body">
+    <div class="field">
+      <label>Name *</label>
+      <input id="fName" type="text" placeholder="Event name" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Start date *</label>
+        <input id="fStart" type="date" />
+      </div>
+      <div class="field">
+        <label>End date</label>
+        <input id="fEnd" type="date" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="fDesc" placeholder="Short description or notes…" rows="2"></textarea>
+    </div>
+    <div class="field">
+      <label>Rating (0–5)</label>
+      <div class="stars-input" id="starsInput">
+        <span class="star-btn" data-v="1" onclick="setStar(1)">★</span>
+        <span class="star-btn" data-v="2" onclick="setStar(2)">★</span>
+        <span class="star-btn" data-v="3" onclick="setStar(3)">★</span>
+        <span class="star-btn" data-v="4" onclick="setStar(4)">★</span>
+        <span class="star-btn" data-v="5" onclick="setStar(5)">★</span>
+        <span class="star-clear" onclick="setStar(null)">clear</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Review</label>
+      <textarea id="fReview" placeholder="How was it? Would you go again?…" rows="3"></textarea>
+    </div>
+    <div class="field">
+      <label>Tags <span style="font-weight:400;text-transform:none;letter-spacing:0">(comma-separated)</span></label>
+      <input id="fTags" type="text" placeholder="music, festival, outdoor" oninput="renderChipPreview('fTags','tagsPreview')" />
+      <div class="chip-preview" id="tagsPreview"></div>
+    </div>
+    <div class="field">
+      <label>Intensity</label>
+      <div class="intensity-control">
+        <button class="intensity-btn" data-v="chill"    onclick="setIntensity('chill')">chill</button>
+        <button class="intensity-btn" data-v="moderate" onclick="setIntensity('moderate')">moderate</button>
+        <button class="intensity-btn" data-v="intense"  onclick="setIntensity('intense')">intense</button>
+        <button class="intensity-btn" data-v="wild"     onclick="setIntensity('wild')">wild</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Vibes <span style="font-weight:400;text-transform:none;letter-spacing:0">(comma-separated)</span></label>
+      <input id="fVibes" type="text" placeholder="cozy, rowdy, electric" oninput="renderChipPreview('fVibes','vibesPreview',true)" />
+      <div class="chip-preview" id="vibesPreview"></div>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <button class="btn-save" onclick="saveEvent()">Save</button>
+    <button class="btn-delete" id="btnDelete" onclick="deleteEvent()" style="display:none">Delete</button>
+    <button class="btn-cancel" onclick="closeSidebar()">Cancel</button>
+  </div>
+</aside>
+
+<script>
+  const BASE = (() => {
+    const p = window.location.pathname.replace(/\/$/, '');
+    return p === '' ? '' : p;
+  })();
+
+  let allEvents = [];
+  let typeFilter = 'all';
+  let activeIntensities = new Set();
+  let activeTags = new Set();
+  let editingId = null;
+  let currentRating = null;
+  let currentIntensity = null;
+
+  async function api(method, path, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    const r = await fetch(BASE + path, opts);
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function loadEvents() {
+    try {
+      allEvents = await api('GET', '/api/events');
+      rebuildTagFilter();
+      renderAll();
+    } catch (e) {
+      document.querySelector('.main').innerHTML = `<p class="state-msg">Failed to load events: ${e.message}</p>`;
+    }
+  }
+
+  function today() { return new Date().toISOString().slice(0, 10); }
+
+  function isPast(e) { return e.startDate < today(); }
+
+  function daysUntil(dateStr) {
+    const ms = new Date(dateStr) - new Date(today());
+    return Math.ceil(ms / 86400000);
+  }
+
+  function formatDate(e) {
+    const fmt = (s) => new Date(s + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    if (e.endDate && e.endDate !== e.startDate) return `${fmt(e.startDate)} – ${fmt(e.endDate)}`;
+    return fmt(e.startDate);
+  }
+
+  function stars(rating) {
+    if (rating == null) return '';
+    const full = Math.round(rating);
+    return '<span class="card-rating">' +
+      '★'.repeat(full) + '<span class="empty">★</span>'.repeat(5 - full) +
+      '</span>';
+  }
+
+  function intensityBadge(intensity) {
+    if (!intensity) return '';
+    return `<span class="card-badge badge-${intensity}">${intensity}</span>`;
+  }
+
+  function buildCard(event) {
+    const past = isPast(event);
+    const intClass = event.intensity ? ` intensity-${event.intensity}` : '';
+    const dateBadge = past
+      ? `<span class="card-date">${formatDate(event)}</span>`
+      : `<span class="card-badge badge-upcoming">upcoming</span>`;
+
+    const subLine = past
+      ? (event.rating != null ? stars(event.rating) : '')
+      : `<div class="card-countdown">📅 ${formatDate(event)}${daysUntil(event.startDate) > 0 ? ` · ${daysUntil(event.startDate)}d away` : ' · today!'}</div>`;
+
+    const reviewEl = event.review
+      ? `<div class="card-review">${escHtml(event.review)}</div>`
+      : '';
+
+    const tagChips = (event.tags || []).map(t =>
+      `<span class="chip">${escHtml(t)}</span>`
+    ).join('');
+    const vibeChips = (event.vibes || []).map(v =>
+      `<span class="chip vibe">${escHtml(v)}</span>`
+    ).join('');
+    const chips = (tagChips || vibeChips)
+      ? `<div class="card-chips">${tagChips}${vibeChips}</div>`
+      : '';
+
+    return `<div class="event-card${intClass}" onclick="openSidebar('${event.id}')">
+      <div class="card-top">
+        <div class="card-name">${escHtml(event.name)}</div>
+        <div class="card-meta">
+          ${intensityBadge(event.intensity)}
+          ${dateBadge}
+        </div>
+      </div>
+      ${subLine}
+      ${reviewEl}
+      ${chips}
+    </div>`;
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function filteredEvents() {
+    const t = today();
+    return allEvents.filter(e => {
+      if (typeFilter === 'past' && e.startDate >= t) return false;
+      if (typeFilter === 'future' && e.startDate < t) return false;
+      if (activeIntensities.size && !activeIntensities.has(e.intensity)) return false;
+      if (activeTags.size && !e.tags?.some(tag => activeTags.has(tag))) return false;
+      return true;
+    });
+  }
+
+  function renderAll() {
+    const t = today();
+    const events = filteredEvents();
+    const past = events.filter(e => e.startDate < t).sort((a,b) => b.startDate.localeCompare(a.startDate));
+    const future = events.filter(e => e.startDate >= t).sort((a,b) => a.startDate.localeCompare(b.startDate));
+
+    const twoCol = document.getElementById('twoCol');
+    const oneCol = document.getElementById('oneCol');
+    const showTwo = typeFilter === 'all' && activeIntensities.size === 0 && activeTags.size === 0;
+
+    if (showTwo) {
+      twoCol.style.display = '';
+      oneCol.style.display = 'none';
+      renderList('pastList', 'pastEmpty', past);
+      renderList('futureList', 'futureEmpty', future);
+    } else {
+      twoCol.style.display = 'none';
+      oneCol.style.display = '';
+      renderList('oneList', 'oneEmpty', [...past, ...future]);
+    }
+
+    const total = allEvents.length;
+    const pastCount = allEvents.filter(e => e.startDate < t).length;
+    const futureCount = total - pastCount;
+    document.getElementById('pageSub').textContent =
+      `${total} total · ${pastCount} past · ${futureCount} upcoming`;
+
+    const clearBtn = document.getElementById('clearBtn');
+    const hasFilters = typeFilter !== 'all' || activeIntensities.size > 0 || activeTags.size > 0;
+    clearBtn.style.display = hasFilters ? '' : 'none';
+  }
+
+  function renderList(listId, emptyId, events) {
+    const list = document.getElementById(listId);
+    const empty = document.getElementById(emptyId);
+    if (!events.length) {
+      list.innerHTML = '';
+      empty.style.display = '';
+    } else {
+      list.innerHTML = events.map(buildCard).join('');
+      empty.style.display = 'none';
+    }
+  }
+
+  function rebuildTagFilter() {
+    const allTags = new Set();
+    allEvents.forEach(e => (e.tags || []).forEach(t => allTags.add(t)));
+
+    const group = document.getElementById('tagGroup');
+    const divider = document.getElementById('tagDivider');
+    group.innerHTML = '';
+
+    if (!allTags.size) { divider.style.display = 'none'; return; }
+    divider.style.display = '';
+
+    [...allTags].sort().forEach(tag => {
+      const btn = document.createElement('button');
+      btn.className = 'filter-tag' + (activeTags.has(tag) ? ' active' : '');
+      btn.textContent = tag;
+      btn.onclick = () => toggleTag(tag);
+      group.appendChild(btn);
+    });
+  }
+
+  function setTypeFilter(type) {
+    typeFilter = type;
+    ['all','past','future'].forEach(t => {
+      document.getElementById('ft' + t.charAt(0).toUpperCase() + t.slice(1))
+        ?.classList.toggle('active', t === type);
+    });
+    renderAll();
+  }
+
+  function toggleIntensity(val) {
+    if (activeIntensities.has(val)) activeIntensities.delete(val);
+    else activeIntensities.add(val);
+    document.getElementById('ip-' + val).classList.toggle('active', activeIntensities.has(val));
+    renderAll();
+  }
+
+  function toggleTag(tag) {
+    if (activeTags.has(tag)) activeTags.delete(tag);
+    else activeTags.add(tag);
+    rebuildTagFilter();
+    renderAll();
+  }
+
+  function clearFilters() {
+    typeFilter = 'all';
+    activeIntensities.clear();
+    activeTags.clear();
+    ['all','past','future'].forEach(t => {
+      document.getElementById('ft' + t.charAt(0).toUpperCase() + t.slice(1))
+        ?.classList.toggle('active', t === 'all');
+    });
+    ['chill','moderate','intense','wild'].forEach(v =>
+      document.getElementById('ip-' + v)?.classList.remove('active')
+    );
+    rebuildTagFilter();
+    renderAll();
+  }
+
+  // ── Sidebar ──
+
+  function openSidebar(id) {
+    editingId = id;
+    const event = id ? allEvents.find(e => e.id === id) : null;
+    document.getElementById('sidebarTitle').textContent = event ? 'Edit Event' : 'Add Event';
+    document.getElementById('btnDelete').style.display = event ? '' : 'none';
+
+    document.getElementById('fName').value = event?.name || '';
+    document.getElementById('fStart').value = event?.startDate || '';
+    document.getElementById('fEnd').value = event?.endDate || '';
+    document.getElementById('fDesc').value = event?.description || '';
+    document.getElementById('fReview').value = event?.review || '';
+    document.getElementById('fTags').value = (event?.tags || []).join(', ');
+    document.getElementById('fVibes').value = (event?.vibes || []).join(', ');
+
+    currentRating = event?.rating ?? null;
+    renderStars();
+
+    currentIntensity = event?.intensity || null;
+    renderIntensity();
+
+    renderChipPreview('fTags', 'tagsPreview');
+    renderChipPreview('fVibes', 'vibesPreview', true);
+
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('overlay').classList.add('visible');
+    document.body.classList.add('sidebar-open');
+    setTimeout(() => document.getElementById('fName').focus(), 220);
+  }
+
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('visible');
+    document.body.classList.remove('sidebar-open');
+    editingId = null;
+  }
+
+  function setStar(v) {
+    currentRating = v;
+    renderStars();
+  }
+
+  function renderStars() {
+    document.querySelectorAll('.star-btn').forEach(btn => {
+      btn.classList.toggle('on', currentRating != null && parseInt(btn.dataset.v) <= currentRating);
+    });
+  }
+
+  function setIntensity(v) {
+    currentIntensity = currentIntensity === v ? null : v;
+    renderIntensity();
+  }
+
+  function renderIntensity() {
+    document.querySelectorAll('.intensity-btn').forEach(btn => {
+      const val = btn.dataset.v;
+      btn.className = 'intensity-btn' + (currentIntensity === val ? ` active-${val}` : '');
+    });
+  }
+
+  function parseTags(inputId) {
+    return document.getElementById(inputId).value
+      .split(',').map(t => t.trim()).filter(Boolean);
+  }
+
+  function renderChipPreview(inputId, previewId, isVibe = false) {
+    const chips = parseTags(inputId);
+    const el = document.getElementById(previewId);
+    el.innerHTML = chips.map(c =>
+      `<span class="chip${isVibe ? ' vibe' : ''}">${escHtml(c)}</span>`
+    ).join('');
+  }
+
+  async function saveEvent() {
+    const name = document.getElementById('fName').value.trim();
+    const startDate = document.getElementById('fStart').value;
+    if (!name) { document.getElementById('fName').focus(); return; }
+    if (!startDate) { document.getElementById('fStart').focus(); return; }
+
+    const endDate = document.getElementById('fEnd').value || undefined;
+    const description = document.getElementById('fDesc').value.trim() || undefined;
+    const review = document.getElementById('fReview').value.trim() || undefined;
+    const tags = parseTags('fTags');
+    const vibes = parseTags('fVibes');
+
+    const payload = {
+      name, startDate,
+      ...(endDate ? { endDate } : {}),
+      ...(description ? { description } : {}),
+      ...(currentRating != null ? { rating: currentRating } : {}),
+      ...(review ? { review } : {}),
+      ...(tags.length ? { tags } : {}),
+      ...(currentIntensity ? { intensity: currentIntensity } : {}),
+      ...(vibes.length ? { vibes } : {}),
+    };
+
+    try {
+      if (editingId) {
+        const updated = await api('PUT', `/api/events/${editingId}`, payload);
+        const idx = allEvents.findIndex(e => e.id === editingId);
+        if (idx >= 0) allEvents[idx] = updated;
+      } else {
+        const created = await api('POST', '/api/events', payload);
+        allEvents.push(created);
+      }
+      rebuildTagFilter();
+      renderAll();
+      closeSidebar();
+    } catch (e) {
+      alert('Save failed: ' + e.message);
+    }
+  }
+
+  async function deleteEvent() {
+    if (!editingId) return;
+    const event = allEvents.find(e => e.id === editingId);
+    if (!confirm(`Delete "${event?.name}"?`)) return;
+    try {
+      await api('DELETE', `/api/events/${editingId}`);
+      allEvents = allEvents.filter(e => e.id !== editingId);
+      rebuildTagFilter();
+      renderAll();
+      closeSidebar();
+    } catch (e) {
+      alert('Delete failed: ' + e.message);
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('sidebar').classList.contains('open')) {
+      closeSidebar();
+    }
+  });
+
+  loadEvents();
+</script>
+</body>
+</html>
