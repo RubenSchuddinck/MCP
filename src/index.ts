@@ -36,6 +36,69 @@ function safeWebPath(rel: string): string {
 }
 
 const FREEZER_DB = join(WEB_DIR, "data", "freezer.json");
+const RECIPES_DB = join(WEB_DIR, "data", "recipes.json");
+
+type Recipe = {
+  id: string;
+  name: string;
+  description?: string;
+  tags?: string[];
+  score?: number;
+  prepTime?: number;
+  cookTime?: number;
+  totalTime?: number;
+  servings?: number;
+  difficulty?: string;
+  ingredients?: string[];
+  steps?: string[];
+  imageUrl?: string;
+};
+
+async function readRecipesDB(): Promise<Recipe[]> {
+  try {
+    const parsed = JSON.parse(await readFile(RECIPES_DB, "utf8"));
+    return Array.isArray(parsed) ? parsed : (parsed.recipes ?? []);
+  } catch {
+    return [];
+  }
+}
+
+async function writeRecipesDB(recipes: Recipe[]): Promise<void> {
+  await writeFile(RECIPES_DB, JSON.stringify({ recipes }, null, 2));
+}
+
+function formatRecipeBrief(r: Recipe): string {
+  const time = r.totalTime ? `${r.totalTime}min` : r.cookTime ? `${r.cookTime}min cook` : "—";
+  const tags = r.tags?.length ? r.tags.join(", ") : "no tags";
+  const score = r.score != null ? ` ★${r.score}` : "";
+  const diff = r.difficulty ? ` · ${r.difficulty}` : "";
+  const img = r.imageUrl ? " 📷" : "";
+  return `[${r.id}] ${r.name}${score}${diff} · ${time} · ${tags}${img}`;
+}
+
+function formatRecipeFull(r: Recipe): string {
+  const lines: string[] = [];
+  lines.push(`Name:        ${r.name}`);
+  if (r.description) lines.push(`Description: ${r.description}`);
+  lines.push(`ID:          ${r.id}`);
+  if (r.tags?.length) lines.push(`Tags:        ${r.tags.join(", ")}`);
+  if (r.difficulty)   lines.push(`Difficulty:  ${r.difficulty}`);
+  if (r.score != null) lines.push(`Score:       ${r.score}/5`);
+  if (r.servings)     lines.push(`Servings:    ${r.servings}`);
+  if (r.prepTime)     lines.push(`Prep time:   ${r.prepTime} min`);
+  if (r.cookTime)     lines.push(`Cook time:   ${r.cookTime} min`);
+  if (r.totalTime)    lines.push(`Total time:  ${r.totalTime} min`);
+  if (r.imageUrl)     lines.push(`Image URL:   ${r.imageUrl}`);
+  if (r.ingredients?.length) {
+    lines.push(`\nIngredients:`);
+    r.ingredients.forEach((ing) => lines.push(`  • ${ing}`));
+  }
+  if (r.steps?.length) {
+    lines.push(`\nSteps:`);
+    r.steps.forEach((step, i) => lines.push(`  ${i + 1}. ${step}`));
+  }
+  return lines.join("\n");
+}
 
 type FreezerItem = {
   id: string;
@@ -536,6 +599,141 @@ function createServer() {
       if (!flagged.length) return text("All freezer items are fresh (or have no expiry set). Nothing to worry about!");
       const lines = flagged.map(formatFreezerItem);
       return text(`${flagged.length} item(s) need attention:\n\n${lines.join("\n")}`);
+    }
+  );
+
+  server.registerTool(
+    "add_recipe",
+    {
+      description: "Add a new recipe to the recipe collection.",
+      inputSchema: {
+        name:        z.string().describe("Recipe name, e.g. 'Pasta Carbonara'"),
+        description: z.string().optional().describe("Short description of the dish"),
+        tags:        z.array(z.string()).optional().describe("Tags, e.g. ['Italian', 'Pasta', 'Dinner']"),
+        ingredients: z.array(z.string()).optional().describe("List of ingredients, e.g. ['400g spaghetti', '4 eggs']"),
+        steps:       z.array(z.string()).optional().describe("Ordered list of cooking steps"),
+        prepTime:    z.number().optional().describe("Prep time in minutes"),
+        cookTime:    z.number().optional().describe("Cook time in minutes"),
+        servings:    z.number().optional().describe("Number of servings"),
+        difficulty:  z.enum(["Easy", "Medium", "Hard"]).optional().describe("Difficulty level"),
+        score:       z.number().min(0).max(5).optional().describe("Personal score 0–5"),
+        imageUrl:    z.string().url().optional().describe("URL to an image of the dish"),
+      },
+    },
+    async ({ name, description, tags, ingredients, steps, prepTime, cookTime, servings, difficulty, score, imageUrl }) => {
+      const totalTime = (prepTime ?? 0) + (cookTime ?? 0) || undefined;
+      const recipe: Recipe = {
+        id: randomUUID(),
+        name: name.trim(),
+        ...(description  ? { description: description.trim() } : {}),
+        ...(tags?.length  ? { tags } : {}),
+        ...(ingredients?.length ? { ingredients } : {}),
+        ...(steps?.length ? { steps } : {}),
+        ...(prepTime != null ? { prepTime } : {}),
+        ...(cookTime != null ? { cookTime } : {}),
+        ...(totalTime   ? { totalTime } : {}),
+        ...(servings != null ? { servings } : {}),
+        ...(difficulty  ? { difficulty } : {}),
+        ...(score != null ? { score } : {}),
+        ...(imageUrl    ? { imageUrl } : {}),
+      };
+      const recipes = await readRecipesDB();
+      recipes.push(recipe);
+      await writeRecipesDB(recipes);
+      return text(`Added recipe:\n\n${formatRecipeFull(recipe)}`);
+    }
+  );
+
+  server.registerTool(
+    "list_recipes",
+    {
+      description: "List all recipes with a brief summary (name, tags, time, difficulty, score).",
+      inputSchema: {},
+    },
+    async () => {
+      const recipes = await readRecipesDB();
+      if (!recipes.length) return text("No recipes saved yet.");
+      const lines = recipes.map(formatRecipeBrief);
+      return text(`${recipes.length} recipe(s):\n\n${lines.join("\n")}`);
+    }
+  );
+
+  server.registerTool(
+    "get_recipe",
+    {
+      description: "Get the full details of a recipe by name or ID.",
+      inputSchema: {
+        query: z.string().describe("Recipe name (partial match) or exact ID"),
+      },
+    },
+    async ({ query }) => {
+      const recipes = await readRecipesDB();
+      const q = query.trim().toLowerCase();
+      const match =
+        recipes.find((r) => r.id === query.trim()) ??
+        recipes.find((r) => r.name.toLowerCase() === q) ??
+        recipes.find((r) => r.name.toLowerCase().includes(q));
+      if (!match) return text(`No recipe found matching "${query}". Use list_recipes to see all.`);
+      return text(formatRecipeFull(match));
+    }
+  );
+
+  server.registerTool(
+    "search_recipes",
+    {
+      description: "Search and filter recipes by text, tags, difficulty, max time, or minimum score.",
+      inputSchema: {
+        query:      z.string().optional().describe("Text to search in name and description (case-insensitive)"),
+        tags:       z.array(z.string()).optional().describe("Return only recipes that have ANY of these tags"),
+        difficulty: z.enum(["Easy", "Medium", "Hard"]).optional().describe("Filter by difficulty level"),
+        maxTime:    z.number().optional().describe("Maximum total time in minutes (prepTime + cookTime)"),
+        minScore:   z.number().optional().describe("Minimum personal score (0–5)"),
+      },
+    },
+    async ({ query, tags, difficulty, maxTime, minScore }) => {
+      let recipes = await readRecipesDB();
+      if (query) {
+        const q = query.toLowerCase();
+        recipes = recipes.filter(
+          (r) => r.name.toLowerCase().includes(q) || r.description?.toLowerCase().includes(q)
+        );
+      }
+      if (tags?.length) {
+        const t = tags.map((x) => x.toLowerCase());
+        recipes = recipes.filter((r) => r.tags?.some((tag) => t.includes(tag.toLowerCase())));
+      }
+      if (difficulty) recipes = recipes.filter((r) => r.difficulty === difficulty);
+      if (maxTime != null) {
+        recipes = recipes.filter((r) => {
+          const tt = r.totalTime ?? ((r.prepTime ?? 0) + (r.cookTime ?? 0));
+          return tt > 0 && tt <= maxTime;
+        });
+      }
+      if (minScore != null) recipes = recipes.filter((r) => r.score != null && r.score >= minScore);
+      if (!recipes.length) return text("No recipes match the given filters.");
+      return text(`${recipes.length} match(es):\n\n${recipes.map(formatRecipeBrief).join("\n")}`);
+    }
+  );
+
+  server.registerTool(
+    "remove_recipe",
+    {
+      description: "Delete a recipe by name (case-insensitive) or ID.",
+      inputSchema: {
+        query: z.string().describe("Recipe name or exact ID to remove"),
+      },
+    },
+    async ({ query }) => {
+      const recipes = await readRecipesDB();
+      const q = query.trim().toLowerCase();
+      const idx =
+        recipes.findIndex((r) => r.id === query.trim()) !== -1
+          ? recipes.findIndex((r) => r.id === query.trim())
+          : recipes.findIndex((r) => r.name.toLowerCase() === q);
+      if (idx === -1) return text(`No recipe found matching "${query}". Use list_recipes to see all.`);
+      const [removed] = recipes.splice(idx, 1);
+      await writeRecipesDB(recipes);
+      return text(`Removed: ${removed.name}`);
     }
   );
 
