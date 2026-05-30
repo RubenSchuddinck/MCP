@@ -395,8 +395,16 @@ function createServer() {
     },
     async () => {
       console.error("git_pull tool called");
-      const { code, out } = await run("git", ["pull", "--ff-only"]);
-      return text(`git pull exited ${code}\n\n${out || "(no output)"}`);
+      const stash = await run("git", ["stash", "--include-untracked"]);
+      const pull  = await run("git", ["pull", "--ff-only"]);
+      const pop   = stash.out.includes("No local changes") ? { code: 0, out: "" } : await run("git", ["stash", "pop"]);
+      const parts = [
+        `git pull exited ${pull.code}`,
+        pull.out || "(no output)",
+        stash.out.trim() && `stash: ${stash.out.trim()}`,
+        pop.out.trim()   && `pop:   ${pop.out.trim()}`,
+      ].filter(Boolean);
+      return text(parts.join("\n"));
     }
   );
 

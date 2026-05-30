@@ -352,6 +352,7 @@ function stars(s){let h='';for(let i=1;i<=5;i++){if(i<=Math.floor(s))h+='<span c
 function dc(d){return{Easy:'diff-easy',Medium:'diff-medium',Hard:'diff-hard'}[d]||'diff-easy';}
 function pill(t,click=true){const c=tc(t);return`<span class="tag-pill" style="background:${c}1a;color:${c};border:1px solid ${c}40" ${click?`data-qt="${t}"`:''}>${t}</span>`;}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function img(r){return r.imageUrl||r.image||'';}
 
 // ── API ───────────────────────────────────────────────────────────────────────
 const BASE=window.location.pathname.replace(/\/(cooking|index\.html)?\/?$/,'')+'/';
@@ -382,7 +383,7 @@ function filter(){
 // ── Render: content ───────────────────────────────────────────────────────────
 function renderCards(){
   if(!S.filtered.length)return`<div class="empty-state"><div class="empty-icon">🔍</div><h3>No recipes found</h3><p>Try adjusting your filters or <a href="#" id="link-new" style="color:var(--primary)">add a new recipe</a>.</p></div>`;
-  return`<div class="cards-grid">${S.filtered.map(r=>`<div class="recipe-card" data-id="${r.id}"><div class="card-hero" style="background:${grad(r.tags)}">${r.image?`<img src="${r.image}" alt="${r.name}" loading="lazy">`:''}${r.image?'':emoji(r.tags)}</div><div class="card-body"><div class="card-title">${r.name}</div><div class="card-desc">${r.description}</div><div class="card-tags">${r.tags.map(t=>pill(t)).join('')}</div></div><div class="card-footer"><div class="card-score">${stars(r.score)} ${r.score.toFixed(1)}</div><div class="card-time">⏱ ${fmt(r.totalTime)}</div><span class="difficulty-badge ${dc(r.difficulty)}">${r.difficulty}</span></div></div>`).join('')}</div>`;
+  return`<div class="cards-grid">${S.filtered.map(r=>`<div class="recipe-card" data-id="${r.id}"><div class="card-hero" style="background:${grad(r.tags)}">${img(r)?`<img src="${img(r)}" alt="${r.name}" loading="lazy">`:''}${img(r)?'':emoji(r.tags)}</div><div class="card-body"><div class="card-title">${r.name}</div><div class="card-desc">${r.description}</div><div class="card-tags">${r.tags.map(t=>pill(t)).join('')}</div></div><div class="card-footer"><div class="card-score">${stars(r.score)} ${r.score.toFixed(1)}</div><div class="card-time">⏱ ${fmt(r.totalTime)}</div><span class="difficulty-badge ${dc(r.difficulty)}">${r.difficulty}</span></div></div>`).join('')}</div>`;
 }
 function renderTable(){
   if(!S.filtered.length)return`<div class="empty-state"><div class="empty-icon">🔍</div><h3>No recipes found</h3><p>Try adjusting your filters.</p></div>`;
@@ -411,7 +412,7 @@ function openModal(id){
   const r=S.recipes.find(x=>x.id===id);if(!r)return;
   document.getElementById('modal-box').innerHTML=`
     <div class="modal-header">
-      <div class="modal-hero-icon">${r.image?`<img src="${r.image}" alt="${r.name}" style="width:64px;height:64px;object-fit:cover;border-radius:10px;">`:emoji(r.tags)}</div>
+      <div class="modal-hero-icon">${img(r)?`<img src="${img(r)}" alt="${r.name}" style="width:64px;height:64px;object-fit:cover;border-radius:10px;">`:emoji(r.tags)}</div>
       <div class="modal-header-info">
         <div class="modal-title">${r.name}</div>
         <div class="modal-tags">${r.tags.map(t=>pill(t,false)).join('')}</div>
@@ -483,7 +484,7 @@ function openForm(recipe=null){
   // Fill fields
   document.getElementById('f-name').value=recipe?recipe.name:'';
   document.getElementById('f-desc').value=recipe?recipe.description:'';
-  document.getElementById('f-image').value=recipe?recipe.image||''  :'';
+  document.getElementById('f-image').value=recipe?img(recipe):'';
   document.getElementById('f-score').value=recipe?recipe.score:4.0;
   document.getElementById('f-score-val').textContent=recipe?recipe.score.toFixed(1):'4.0';
   document.getElementById('f-servings').value=recipe?recipe.servings:4;
@@ -517,7 +518,7 @@ async function saveForm(){
     id:editingId||uid(),
     name,
     description:document.getElementById('f-desc').value.trim(),
-    image:document.getElementById('f-image').value.trim()||undefined,
+    imageUrl:document.getElementById('f-image').value.trim()||undefined,
     tags:[...formTags],
     score:parseFloat(document.getElementById('f-score').value),
     prepTime:prep,cookTime:cook,totalTime:prep+cook,
