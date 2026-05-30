@@ -14,10 +14,8 @@ process.on("unhandledRejection", (e) => console.error("unhandledRejection:", e))
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = resolve(__dirname, "..", "web");
 
-// Tracks the running webpage process (persists across stateless MCP requests)
 let webProcess: ChildProcess | null = null;
 
-// Recursively list files under WEB_DIR, returning paths relative to WEB_DIR
 async function listWebFiles(dir = WEB_DIR): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
   const files: string[] = [];
@@ -29,7 +27,6 @@ async function listWebFiles(dir = WEB_DIR): Promise<string[]> {
   return files;
 }
 
-// Resolve a user-supplied relative path safely inside WEB_DIR (blocks traversal)
 function safeWebPath(rel: string): string {
   const target = resolve(WEB_DIR, rel);
   if (target !== WEB_DIR && !target.startsWith(WEB_DIR + sep)) {
@@ -90,7 +87,6 @@ const MANIFEST = join(REPO_DIR, "servers.json");
 const CADDYFILE = process.env.CADDYFILE || "/etc/caddy/Caddyfile";
 const MCP_SERVICE = process.env.MCP_SERVICE || "mcp";
 
-// Tracks running webservers by name (persists across stateless MCP requests)
 const webServers = new Map<string, ChildProcess>();
 
 type ServerEntry = { name: string; entry: string; port: number; domain?: string; path?: string; start?: boolean };
@@ -108,7 +104,6 @@ async function writeManifest(servers: ServerEntry[]): Promise<void> {
   await writeFile(MANIFEST, JSON.stringify({ servers }, null, 2) + "\n", "utf8");
 }
 
-// Run a command, capturing combined stdout+stderr
 function run(cmd: string, args: string[], cwd = REPO_DIR): Promise<{ code: number; out: string }> {
   return new Promise((res) => {
     const p = spawn(cmd, args, { cwd });
@@ -131,7 +126,6 @@ const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 const authCodes = new Set<string>();
 
-// --- OAuth (claude.ai requires this discovery dance; we auto-approve) ---
 app.get("/.well-known/oauth-protected-resource", (req, res) => {
   res.json({ resource: BASE_URL, authorization_servers: [BASE_URL] });
 });
@@ -169,7 +163,6 @@ app.post("/token", (req, res) => {
   res.json({ access_token: randomUUID(), token_type: "Bearer" });
 });
 
-// --- MCP server factory ---
 function createServer() {
   const server = new McpServer({ name: "my-mcp-server", version: "1.0.0" });
   server.registerTool(
@@ -350,7 +343,7 @@ function createServer() {
       const servers = await readManifest();
       const next: ServerEntry = { name, entry, port, ...(domain ? { domain } : {}), ...(path ? { path } : {}) };
       const idx = servers.findIndex((s) => s.name === name);
-      if (idx >= 0) next.start = servers[idx].start; // preserve start flag on update
+      if (idx >= 0) next.start = servers[idx].start;
       if (idx >= 0) servers[idx] = next;
       else servers.push(next);
       await writeManifest(servers);
@@ -374,7 +367,6 @@ function createServer() {
       const withDomain = servers.filter((s) => s.domain);
       if (!withDomain.length) return text("No servers have a domain set; nothing to proxy.");
 
-      // Group servers by domain so path-based routes share one site block.
       const byDomain = new Map<string, ServerEntry[]>();
       for (const s of withDomain) {
         const arr = byDomain.get(s.domain!) ?? [];
@@ -386,12 +378,10 @@ function createServer() {
       for (const [domain, entries] of byDomain) {
         const pathed = entries.filter((e) => e.path);
         const roots = entries.filter((e) => !e.path);
-        // Simple case: a single root server gets a bare reverse_proxy.
         if (pathed.length === 0 && roots.length === 1) {
           blocks.push(`${domain} {\n    reverse_proxy localhost:${roots[0].port}\n}`);
           continue;
         }
-        // Otherwise use handle blocks: path matchers first, then root catch-all.
         const inner: string[] = [];
         for (const e of pathed) {
           const p = e.path!.startsWith("/") ? e.path! : `/${e.path}`;
@@ -484,7 +474,7 @@ function createServer() {
   server.registerTool(
     "get_almost_spoiled_items",
     {
-      description: "Get freezer items that are almost spoiled (≤7 days remaining or ≤20% of shelf life left) or already expired.",
+      description: "Get freezer items that are almost spoiled (<=7 days remaining or <=20% of shelf life left) or already expired.",
       inputSchema: {},
     },
     async () => {
@@ -514,9 +504,6 @@ function createServer() {
         const b = await run("npm", ["run", "build"]);
         if (b.code !== 0) return text(`Build failed (exit ${b.code}) — NOT restarting:\n${b.out}`);
       }
-      // Queue the restart with --no-block so this response can flush before the
-      // process dies; the job is handed to PID 1 (outside our cgroup) so it
-      // survives our exit and brings the service back up.
       const child = spawn("sudo", ["systemctl", "restart", "--no-block", MCP_SERVICE], {
         detached: true,
         stdio: "ignore",
@@ -531,7 +518,6 @@ function createServer() {
   return server;
 }
 
-// --- Single Streamable HTTP endpoint, stateless: fresh server+transport per request ---
 async function handleMcp(req: Request, res: Response) {
   const server = createServer();
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });

@@ -1,17 +1,12 @@
 import { createServer } from "http";
 import { readFile, writeFile } from "fs/promises";
 import { fileURLToPath } from "url";
-import { dirname, join, extname } from "path";
+import { dirname, join } from "path";
 import { randomUUID } from "crypto";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.WEB_PORT ? parseInt(process.env.WEB_PORT) : (process.env.PORT ? parseInt(process.env.PORT) : 8086);
 const DB = join(__dirname, "data", "freezer.json");
-
-const MIME = {
-  ".html": "text/html; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-};
 
 async function readDB() {
   try {
@@ -53,7 +48,6 @@ createServer(async (req, res) => {
   const pathname = url.split("?")[0].replace(/\/+$/, "") || "/";
   const method = req.method;
 
-  // GET all items
   if (pathname === "/api/freezer" && method === "GET") {
     try {
       const db = await readDB();
@@ -64,7 +58,6 @@ createServer(async (req, res) => {
     return;
   }
 
-  // POST add item
   if (pathname === "/api/freezer" && method === "POST") {
     try {
       const body = await readBody(req);
@@ -88,7 +81,6 @@ createServer(async (req, res) => {
     return;
   }
 
-  // PUT update item
   const putMatch = pathname.match(/^\/api\/freezer\/(.+)$/);
   if (putMatch && method === "PUT") {
     try {
@@ -106,7 +98,6 @@ createServer(async (req, res) => {
     return;
   }
 
-  // DELETE item
   const delMatch = pathname.match(/^\/api\/freezer\/(.+)$/);
   if (delMatch && method === "DELETE") {
     try {
@@ -122,7 +113,6 @@ createServer(async (req, res) => {
     return;
   }
 
-  // Static files
   try {
     if (pathname === "/" || pathname === "") {
       const content = await readFile(join(__dirname, "freezer.html"));

@@ -13,13 +13,6 @@
       "port": 8080,
       "domain": "rubenplex.duckdns.org",
       "path": "/app1"
-    },
-    {
-      "name": "freezer",
-      "entry": "web/freezer-server.mjs",
-      "port": 8086,
-      "domain": "rubenplex.duckdns.org",
-      "path": "/freezer"
     }
   ]
 }
