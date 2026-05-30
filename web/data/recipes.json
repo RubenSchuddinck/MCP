@@ -299,6 +299,7 @@
       "id": "10",
       "name": "Chocolate Lava Cake",
       "description": "Individual chocolate cakes with a molten, flowing centre. Looks impossibly impressive, but the batter can be made hours ahead.",
+      "image": "https://picsum.photos/seed/lavacake/600/400",
       "tags": ["Dessert", "Baking"],
       "score": 4.8,
       "prepTime": 15,
