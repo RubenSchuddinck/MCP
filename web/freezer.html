@@ -8,7 +8,6 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, sans-serif; background: #0f1923; color: #e0e8f0; min-height: 100vh; padding: 24px 16px; }
   h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 24px; color: #7dd3fc; letter-spacing: -0.02em; }
-  h1 span { font-size: 1.2rem; }
 
   .add-form {
     background: #1a2637;
@@ -21,8 +20,9 @@
     gap: 10px;
     align-items: end;
   }
+  .add-form .notes-row { grid-column: 1 / -1; }
   .add-form label { display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
-  .add-form input {
+  .add-form input, .add-form textarea {
     background: #0f1923;
     border: 1px solid #2a3f5a;
     border-radius: 8px;
@@ -31,9 +31,11 @@
     font-size: 0.95rem;
     outline: none;
     transition: border-color 0.15s;
+    font-family: inherit;
   }
-  .add-form input:focus { border-color: #7dd3fc; }
-  .add-form input::placeholder { color: #475569; }
+  .add-form textarea { resize: none; height: 52px; }
+  .add-form input:focus, .add-form textarea:focus { border-color: #7dd3fc; }
+  .add-form input::placeholder, .add-form textarea::placeholder { color: #475569; }
   button.add-btn {
     background: #2563eb;
     color: #fff;
@@ -68,7 +70,7 @@
     border-radius: 10px;
     padding: 14px 16px;
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto auto auto;
     gap: 12px;
     align-items: center;
     transition: border-color 0.15s;
@@ -87,7 +89,61 @@
     border-radius: 5px;
     padding: 2px 7px;
   }
-  .meta-tag.portions { color: #7dd3fc; }
+
+  .item-notes {
+    margin-top: 7px;
+    font-size: 0.8rem;
+    color: #64748b;
+    cursor: text;
+    line-height: 1.4;
+  }
+  .item-notes:hover { color: #94a3b8; }
+  .notes-placeholder { font-style: italic; color: #334155; }
+  .notes-edit {
+    width: 100%;
+    background: #0f1923;
+    border: 1px solid #3b5268;
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: #e0e8f0;
+    font-size: 0.8rem;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    margin-top: 2px;
+  }
+  .notes-edit:focus { border-color: #7dd3fc; }
+
+  .portion-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .portion-btn {
+    background: #1e293b;
+    border: 1px solid #2a3f5a;
+    border-radius: 5px;
+    color: #7dd3fc;
+    width: 26px;
+    height: 26px;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s;
+    flex-shrink: 0;
+  }
+  .portion-btn:hover { background: #2a3f5a; }
+  .portion-count {
+    min-width: 20px;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #7dd3fc;
+  }
 
   .badge {
     font-size: 0.75rem;
@@ -116,14 +172,18 @@
     align-items: center;
     justify-content: center;
     transition: border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
   }
   button.del-btn:hover { border-color: #ef4444; color: #ef4444; }
 
   .empty { text-align: center; color: #475569; padding: 48px 0; font-size: 1rem; }
 
   @media (max-width: 600px) {
-    .add-form { grid-template-columns: 1fr; }
-    .item { grid-template-columns: 1fr auto; }
+    .add-form { grid-template-columns: 1fr 1fr; }
+    .add-form .notes-row { grid-column: 1 / -1; }
+    .add-form label:last-of-type { grid-column: 1 / -1; }
+    .add-form button { grid-column: 1 / -1; }
+    .item { grid-template-columns: 1fr auto auto; }
     .badge { display: none; }
   }
 </style>
@@ -146,6 +206,10 @@
     <input id="inp-expires" type="number" min="1" placeholder="optional">
   </label>
   <button class="add-btn" id="btn-add" onclick="addItem()">Add to freezer</button>
+  <label class="notes-row">
+    Notes
+    <textarea id="inp-notes" placeholder="optional — e.g. 'marinated', 'cooked', 'from 30 May batch'"></textarea>
+  </label>
 </div>
 
 <div class="stats" id="stats"></div>
@@ -189,6 +253,7 @@
     }
 
     list.innerHTML = items.map(item => {
+      const portions = item.portions || 1;
       const added = new Date(item.addedAt);
       const daysSince = Math.floor((Date.now() - added.getTime()) / 86400000);
       const addedStr = added.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -199,16 +264,25 @@
           : `<span class="meta-tag">${item.remaining}d remaining</span>`
         : '';
 
+      const notesHtml = item.notes
+        ? `<div class="item-notes" data-id="${item.id}" data-notes="${escAttr(item.notes)}" onclick="startEditNotes(this)">${escHtml(item.notes)}</div>`
+        : `<div class="item-notes" data-id="${item.id}" data-notes="" onclick="startEditNotes(this)"><span class="notes-placeholder">Add a note...</span></div>`;
+
       return `
         <div class="item ${item.status}">
           <div>
             <div class="item-name">${escHtml(item.name)}</div>
             <div class="item-meta">
-              <span class="meta-tag portions">${item.portions || 1} portion${(item.portions || 1) !== 1 ? 's' : ''}</span>
               <span class="meta-tag">Added ${addedStr}</span>
               <span class="meta-tag">${daysSince}d in freezer</span>
               ${expiryTag}
             </div>
+            ${notesHtml}
+          </div>
+          <div class="portion-ctrl">
+            <button class="portion-btn" onclick="adjustPortions('${item.id}', ${portions}, -1)">−</button>
+            <span class="portion-count">${portions}</span>
+            <button class="portion-btn" onclick="adjustPortions('${item.id}', ${portions}, 1)">+</button>
           </div>
           <span class="badge ${item.status}">${statusLabel(item.status)}</span>
           <button class="del-btn" onclick="deleteItem('${item.id}')" title="Remove">✕</button>
@@ -218,13 +292,17 @@
   }
 
   function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
   }
 
   async function addItem() {
     const name = document.getElementById('inp-name').value.trim();
     const portions = parseInt(document.getElementById('inp-portions').value) || 1;
     const expiresRaw = document.getElementById('inp-expires').value.trim();
+    const notes = document.getElementById('inp-notes').value.trim();
     if (!name) { document.getElementById('inp-name').focus(); return; }
 
     const btn = document.getElementById('btn-add');
@@ -232,14 +310,53 @@
 
     const body = { name, portions };
     if (expiresRaw) body.expiresInDays = parseInt(expiresRaw);
+    if (notes) body.notes = notes;
 
     await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
     document.getElementById('inp-name').value = '';
     document.getElementById('inp-portions').value = '1';
     document.getElementById('inp-expires').value = '';
+    document.getElementById('inp-notes').value = '';
     btn.disabled = false;
     load();
+  }
+
+  async function adjustPortions(id, current, delta) {
+    const newVal = Math.max(0, current + delta);
+    await fetch(`${API}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ portions: newVal })
+    });
+    load();
+  }
+
+  function startEditNotes(el) {
+    if (el.querySelector('textarea')) return;
+    const id = el.dataset.id;
+    const current = el.dataset.notes || '';
+    const ta = document.createElement('textarea');
+    ta.className = 'notes-edit';
+    ta.value = current;
+    ta.rows = 2;
+    ta.placeholder = 'Add a note...';
+    el.innerHTML = '';
+    el.appendChild(ta);
+    ta.focus();
+    ta.addEventListener('blur', async () => {
+      const newNotes = ta.value.trim();
+      await fetch(`${API}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: newNotes || null })
+      });
+      load();
+    });
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Escape') load();
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.blur(); }
+    });
   }
 
   async function deleteItem(id) {

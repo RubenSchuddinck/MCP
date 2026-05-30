@@ -43,6 +43,7 @@ type FreezerItem = {
   addedAt: string;
   portions: number;
   expiresInDays?: number;
+  notes?: string;
 };
 
 async function readFreezerDB(): Promise<{ items: FreezerItem[] }> {
@@ -79,7 +80,8 @@ function formatFreezerItem(item: FreezerItem): string {
       : `, ${remaining}d remaining of ${item.expiresInDays}d`
     : ", no expiry set";
   const statusEmoji = status === "fresh" ? "✅" : status === "almost-spoiled" ? "⚠️" : status === "expired" ? "❌" : "🔵";
-  return `${statusEmoji} ${item.name} — ${portionStr}, added ${added} (${daysSince}d ago)${expiryStr}`;
+  const notesStr = item.notes ? ` | 📝 ${item.notes}` : "";
+  return `${statusEmoji} ${item.name} — ${portionStr}, added ${added} (${daysSince}d ago)${expiryStr}${notesStr}`;
 }
 
 const REPO_DIR = resolve(__dirname, "..");
@@ -434,20 +436,48 @@ function createServer() {
         name: z.string().describe("Name of the item, e.g. 'Chicken breasts'"),
         portions: z.number().optional().describe("Number of portions frozen (default 1)"),
         expiresInDays: z.number().optional().describe("How many days the item lasts in the freezer (from today). Omit if unknown."),
+        notes: z.string().optional().describe("Optional notes, e.g. 'marinated', 'cooked', 'from batch on 30 May'"),
       },
     },
-    async ({ name, portions, expiresInDays }) => {
+    async ({ name, portions, expiresInDays, notes }) => {
       const item: FreezerItem = {
         id: randomUUID(),
         name: name.trim(),
         addedAt: new Date().toISOString(),
         portions: portions ?? 1,
         ...(expiresInDays != null ? { expiresInDays } : {}),
+        ...(notes ? { notes: notes.trim() } : {}),
       };
       const db = await readFreezerDB();
       db.items.push(item);
       await writeFreezerDB(db);
       return text(`Added: ${formatFreezerItem(item)}`);
+    }
+  );
+
+  server.registerTool(
+    "update_freezer_item",
+    {
+      description: "Update portions or notes on an existing freezer item (find by name or id).",
+      inputSchema: {
+        query: z.string().describe("The item ID or name to update (case-insensitive)"),
+        portions: z.number().optional().describe("New portion count"),
+        notes: z.string().optional().describe("New notes (pass empty string to clear)"),
+      },
+    },
+    async ({ query, portions, notes }) => {
+      const db = await readFreezerDB();
+      const q = query.trim();
+      let idx = db.items.findIndex((i) => i.id === q);
+      if (idx === -1) idx = db.items.findIndex((i) => i.name.toLowerCase() === q.toLowerCase());
+      if (idx === -1) return text(`No item found matching "${q}". Use list_freezer_items to see current items.`);
+      if (portions != null) db.items[idx].portions = portions;
+      if (notes != null) {
+        if (notes.trim() === "") delete db.items[idx].notes;
+        else db.items[idx].notes = notes.trim();
+      }
+      await writeFreezerDB(db);
+      return text(`Updated: ${formatFreezerItem(db.items[idx])}`);
     }
   );
 
