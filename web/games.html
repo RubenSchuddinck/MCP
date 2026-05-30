@@ -23,9 +23,11 @@
 
     /* ── HEADER ── */
     .app-header { position: sticky; top: 0; z-index: 100; background: var(--surface); border-bottom: 1px solid var(--border); height: 68px; display: flex; align-items: center; gap: 12px; padding: 0 24px; box-shadow: var(--shadow); }
-    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
-    .brand-icon { font-size: 1.6rem; line-height: 1; }
-    .brand-title { font-size: 1.15rem; font-weight: 700; color: var(--primary); letter-spacing: -.02em; }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .brand-mark { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; width: 22px; height: 22px; flex-shrink: 0; }
+    .brand-mark span { border-radius: 3px; }
+    .brand-title { font-size: 1.05rem; font-weight: 800; color: var(--primary); letter-spacing: -.02em; }
+    .brand-sub { font-size: 11px; font-weight: 500; color: var(--text-3); letter-spacing: .04em; text-transform: uppercase; margin-top: 1px; }
     .header-date { margin-left: auto; font-size: 13px; color: var(--text-3); font-weight: 500; }
 
     /* ── CONTENT ── */
@@ -37,9 +39,10 @@
 
     /* ── GAME CARD ── */
     .game-card { background: var(--surface); border-radius: var(--radius); border: 1.5px solid var(--border); box-shadow: var(--shadow); overflow: hidden; }
-    .card-header { display: flex; align-items: center; gap: 14px; padding: 18px 20px 16px; border-bottom: 1px solid var(--border); background: var(--primary-bg); }
-    .card-icon { font-size: 2rem; line-height: 1; flex-shrink: 0; }
-    .card-name { font-size: 1.05rem; font-weight: 800; letter-spacing: -.02em; color: var(--primary); }
+    .card-header { display: flex; align-items: center; gap: 14px; padding: 18px 20px 16px; border-bottom: 1px solid var(--border); }
+    .game-badge { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: #fff; flex-shrink: 0; }
+    .card-name { font-size: 1.05rem; font-weight: 800; letter-spacing: -.02em; color: var(--text); }
+    .card-sub { font-size: 11px; color: var(--text-3); font-weight: 500; margin-top: 2px; }
     .card-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
 
     /* ── TRACK SECTION ── */
@@ -51,7 +54,7 @@
     .track-actions { display: flex; gap: 6px; align-items: center; }
 
     /* status badges */
-    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
     .badge-green { background: var(--green-bg); color: var(--green); }
     .badge-amber { background: var(--amber-bg); color: var(--amber); }
     .badge-red { background: var(--red-bg); color: var(--red); }
@@ -64,6 +67,8 @@
     .btn-primary:disabled { opacity: .45; cursor: default; }
     .btn-primary:disabled:hover { background: var(--primary); border-color: var(--primary); }
     .btn-sm { height: 30px; padding: 0 10px; font-size: 12px; border-radius: 7px; }
+    .btn-done { background: var(--green-bg); border-color: #86efac; color: var(--green); }
+    .btn-done:hover { background: var(--green-bg); border-color: #86efac; color: var(--green); cursor: default; }
     .btn-icon { width: 30px; height: 30px; padding: 0; justify-content: center; font-size: 14px; border-radius: 7px; }
 
     /* inline number input */
@@ -82,7 +87,10 @@
     .log-list::-webkit-scrollbar { width: 4px; }
     .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     .log-entry { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
-    .log-result { font-size: 13px; flex-shrink: 0; }
+    .log-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .log-dot-win { background: var(--green); }
+    .log-dot-fail { background: var(--red); }
+    .log-dot-neutral { background: var(--text-3); }
     .log-date { color: var(--text-3); min-width: 84px; flex-shrink: 0; }
     .log-detail { display: flex; align-items: center; gap: 5px; }
     .log-guesses { font-size: 11px; color: var(--text-3); background: var(--bg); border: 1px solid var(--border); padding: 1px 6px; border-radius: 10px; }
@@ -94,7 +102,7 @@
     @keyframes modal-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
     .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
     .modal-head h3 { font-size: 1rem; font-weight: 700; }
-    .modal-close { width: 30px; height: 30px; border: 1.5px solid var(--border); border-radius: 7px; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-2); font-size: 14px; transition: all var(--transition); }
+    .modal-close { width: 30px; height: 30px; border: 1.5px solid var(--border); border-radius: 7px; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-2); font-size: 18px; line-height: 1; transition: all var(--transition); }
     .modal-close:hover { background: var(--red-bg); border-color: #fca5a5; color: var(--red); }
     .modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
     .modal-field { display: flex; flex-direction: column; gap: 5px; }
@@ -106,10 +114,14 @@
 
     /* ── RESULT MODAL SPECIFICS ── */
     .result-toggle { display: flex; gap: 8px; }
-    .result-btn { flex: 1; height: 52px; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); font-size: 1rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: all var(--transition); display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--text-2); }
-    .result-btn:hover { border-color: var(--primary); }
+    .result-btn { flex: 1; height: 52px; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); font-size: 0.95rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: all var(--transition); display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--text-2); letter-spacing: .01em; }
+    .result-btn:hover { border-color: var(--primary); color: var(--primary); }
     .result-btn.selected-win { background: var(--green-bg); border-color: var(--green); color: var(--green); }
     .result-btn.selected-fail { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+    .result-pip { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .result-btn.selected-win .result-pip { background: var(--green); }
+    .result-btn.selected-fail .result-pip { background: var(--red); }
+    .result-btn:not(.selected-win):not(.selected-fail) .result-pip { background: var(--text-3); }
     .guess-row { display: flex; align-items: center; gap: 10px; }
     .guess-val { width: 52px; height: 40px; text-align: center; border: 1.5px solid var(--border); border-radius: 8px; font-size: 1.1rem; font-weight: 700; font-family: inherit; color: var(--text); background: var(--bg); outline: none; transition: border-color var(--transition); }
     .guess-val:focus { border-color: var(--primary); background: #fff; }
@@ -135,8 +147,16 @@
 
 <header class="app-header">
   <a class="brand" href="#">
-    <span class="brand-icon">🎮</span>
-    <span class="brand-title">Mini Games Tracker</span>
+    <div class="brand-mark">
+      <span style="background:#7c3aed"></span>
+      <span style="background:#059669"></span>
+      <span style="background:#db2777"></span>
+      <span style="background:#2563eb"></span>
+    </div>
+    <div>
+      <div class="brand-title">Mini Games</div>
+      <div class="brand-sub">Tracker</div>
+    </div>
   </a>
   <span class="header-date" id="header-date"></span>
 </header>
@@ -152,14 +172,18 @@
   <div class="modal-box">
     <div class="modal-head">
       <h3 id="result-title">How did it go?</h3>
-      <button class="modal-close" id="result-close">✕</button>
+      <button class="modal-close" id="result-close">&#215;</button>
     </div>
     <div class="modal-body">
       <div class="modal-field">
         <label>Result</label>
         <div class="result-toggle">
-          <button class="result-btn" id="btn-win" onclick="setResult(true)">✓ Got it</button>
-          <button class="result-btn" id="btn-fail" onclick="setResult(false)">✗ Failed</button>
+          <button class="result-btn" id="btn-win" onclick="setResult(true)">
+            <span class="result-pip"></span>Got it
+          </button>
+          <button class="result-btn" id="btn-fail" onclick="setResult(false)">
+            <span class="result-pip"></span>Failed
+          </button>
         </div>
       </div>
       <div class="modal-field" id="result-date-field" style="display:none">
@@ -188,7 +212,7 @@
   <div class="modal-box">
     <div class="modal-head">
       <h3 id="modal-title">Edit</h3>
-      <button class="modal-close" id="modal-close">✕</button>
+      <button class="modal-close" id="modal-close">&#215;</button>
     </div>
     <div class="modal-body">
       <div class="modal-field">
@@ -212,12 +236,12 @@
 <script>
 // ── Config ───────────────────────────────────────────────────────────────────
 const GAMES = [
-  { id: 'faces',   name: 'Faces',            icon: '👤' },
-  { id: 'episode', name: 'Guess the Episode', icon: '📺' },
-  { id: 'gaps',    name: 'Gaps',              icon: '🔡' },
-  { id: 'acrostic',name: 'Acrostic',          icon: '📝' },
-  { id: 'wordle',  name: 'Wordle',            icon: '📖' },
-  { id: 'horsle',  name: 'Horsle',            icon: '🐴' },
+  { id: 'faces',    name: 'Faces',             abbr: 'FA', color: '#7c3aed' },
+  { id: 'episode',  name: 'Guess the Episode', abbr: 'EP', color: '#059669' },
+  { id: 'gaps',     name: 'Gaps',              abbr: 'GA', color: '#ea580c' },
+  { id: 'acrostic', name: 'Acrostic',          abbr: 'AC', color: '#db2777' },
+  { id: 'wordle',   name: 'Wordle',            abbr: 'WO', color: '#2563eb' },
+  { id: 'horsle',   name: 'Horsle',            abbr: 'HO', color: '#b45309' },
 ];
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -261,7 +285,7 @@ function daysSince(dateStr) {
 
 function dailyBadge(days) {
   if (days === null) return { cls: 'badge-red', text: 'Never played' };
-  if (days === 0)    return { cls: 'badge-green', text: 'Done today!' };
+  if (days === 0)    return { cls: 'badge-green', text: 'Done today' };
   if (days === 1)    return { cls: 'badge-amber', text: '1 day ago' };
   return { cls: 'badge-red', text: `${days} days ago` };
 }
@@ -297,7 +321,7 @@ function renderSummary() {
 }
 
 function logEntryHtml(e) {
-  const resultIcon = e.success === true ? '✅' : e.success === false ? '❌' : '•';
+  const dotCls = e.success === true ? 'log-dot-win' : e.success === false ? 'log-dot-fail' : 'log-dot-neutral';
   const label = e.type === 'daily'
     ? 'Daily'
     : `#${e.backlogNumber} Backlog`;
@@ -306,7 +330,7 @@ function logEntryHtml(e) {
     : '';
   return `
     <div class="log-entry">
-      <span class="log-result">${resultIcon}</span>
+      <span class="log-dot ${dotCls}"></span>
       <span class="log-date">${formatDate(e.date)}</span>
       <div class="log-detail">
         <span>${label}</span>
@@ -330,9 +354,10 @@ function renderCard(game) {
   return `
     <div class="game-card" data-game="${game.id}">
       <div class="card-header">
-        <div class="card-icon">${game.icon}</div>
+        <div class="game-badge" style="background:${game.color}">${game.abbr}</div>
         <div>
           <div class="card-name">${game.name}</div>
+          <div class="card-sub">${d.lastDailyDate ? `Last played ${formatDate(d.lastDailyDate)}` : 'Not started'}</div>
         </div>
       </div>
       <div class="card-body">
@@ -344,12 +369,11 @@ function renderCard(game) {
             <div class="track-stat">
               <span class="badge ${badge.cls}">${badge.text}</span>
             </div>
-            ${d.lastDailyDate ? `<div class="track-sub">Last: ${formatDate(d.lastDailyDate)}</div>` : ''}
           </div>
           <div class="track-actions">
-            <button class="btn btn-sm" data-action="daily-past" data-game="${game.id}" title="Log a missed day">＋ Past day</button>
-            <button class="btn btn-sm btn-primary" data-action="daily" data-game="${game.id}" ${isToday ? 'disabled' : ''}>
-              ${isToday ? '✓ Done' : '✓ Today'}
+            <button class="btn btn-sm" data-action="daily-past" data-game="${game.id}" title="Log a missed day">+ Past day</button>
+            <button class="btn btn-sm ${isToday ? 'btn-done' : 'btn-primary'}" data-action="daily" data-game="${game.id}" ${isToday ? 'disabled' : ''}>
+              ${isToday ? 'Done' : 'Today'}
             </button>
           </div>
         </div>
@@ -365,7 +389,7 @@ function renderCard(game) {
           </div>
           <div class="track-actions">
             <div class="num-input-wrap">
-              <button class="btn btn-icon" data-action="backlog-dec" data-game="${game.id}" title="−1">−</button>
+              <button class="btn btn-icon" data-action="backlog-dec" data-game="${game.id}" title="-1">−</button>
               <input class="num-input" type="number" min="0" value="${d.backlogNumber || 0}"
                 data-action="backlog-input" data-game="${game.id}" />
               <button class="btn btn-icon btn-primary" data-action="backlog-inc" data-game="${game.id}" title="+1">+</button>
@@ -393,7 +417,6 @@ function render() {
 async function markDailyDate(gameId, date, success, guesses) {
   data[gameId].log = data[gameId].log || [];
   data[gameId].log.push({ date, type: 'daily', success, guesses });
-  // keep lastDailyDate as the most recent date played
   if (!data[gameId].lastDailyDate || date > data[gameId].lastDailyDate) {
     data[gameId].lastDailyDate = date;
   }
@@ -436,7 +459,7 @@ function openResultModal(gameId, actionType, newNum = null, defaultDate = null) 
   pendingAction = { type: actionType, gameId, newNum };
   const isPast = actionType === 'daily-past';
   const label = isPast ? 'Past daily' : actionType === 'daily' ? 'Daily' : `Backlog #${newNum}`;
-  document.getElementById('result-title').textContent = `${game.icon} ${game.name} — ${label}`;
+  document.getElementById('result-title').textContent = `${game.name} — ${label}`;
   document.getElementById('result-sub').textContent = '';
   document.getElementById('guess-input').value = 1;
   document.getElementById('result-date-field').style.display = isPast ? '' : 'none';
@@ -562,7 +585,7 @@ document.getElementById('header-date').textContent = new Date().toLocaleDateStri
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 (async () => {
-  document.getElementById('summary-bar').innerHTML = '<span style="color:var(--text-3);font-size:13px">Loading…</span>';
+  document.getElementById('summary-bar').innerHTML = '<span style="color:var(--text-3);font-size:13px">Loading...</span>';
   try {
     data = await loadData();
   } catch {

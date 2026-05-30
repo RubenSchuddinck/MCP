@@ -3,332 +3,450 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Freezer Inventory</title>
+<title>Freezer</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: system-ui, sans-serif; background: #0f1923; color: #e0e8f0; min-height: 100vh; padding: 20px 16px; }
-  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; color: #7dd3fc; letter-spacing: -0.02em; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0a0f16;
+    --surface:   #0f1820;
+    --surface-2: #141f2e;
+    --border:    #1e2f45;
+    --border-2:  #253a56;
+    --text:      #dce8f5;
+    --text-2:    #7a98b8;
+    --text-3:    #3d566e;
+    --blue:      #4d9de0;
+    --green:     #3dba78;
+    --amber:     #e8a020;
+    --red:       #e05555;
+    --radius:    10px;
+    --mono:      "SF Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ── Page header ── */
+  .page-header {
+    border-bottom: 1px solid var(--border);
+    padding: 22px 24px 20px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+  .page-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--blue);
+  }
+  .page-sub {
+    font-size: 0.72rem;
+    color: var(--text-3);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Content ── */
+  .content { padding: 24px; max-width: 840px; }
 
   /* ── Add form ── */
   .add-form {
-    background: #1a2637;
-    border: 1px solid #2a3f5a;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 28px;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: auto auto auto;
     gap: 10px;
   }
   .add-form label {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    font-size: 0.75rem;
-    color: #94a3b8;
-    font-weight: 600;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    color: var(--text-3);
   }
   .add-form input, .add-form textarea {
-    background: #0f1923;
-    border: 1px solid #2a3f5a;
-    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
     padding: 8px 11px;
-    color: #e0e8f0;
-    font-size: 0.9rem;
+    color: var(--text);
+    font-size: 0.88rem;
     outline: none;
     transition: border-color 0.15s;
     font-family: inherit;
     width: 100%;
   }
-  .add-form input:focus, .add-form textarea:focus { border-color: #7dd3fc; }
-  .add-form input::placeholder, .add-form textarea::placeholder { color: #475569; }
+  .add-form input:focus, .add-form textarea:focus { border-color: var(--blue); }
+  .add-form input::placeholder, .add-form textarea::placeholder { color: var(--text-3); }
   .add-form textarea { resize: none; height: 36px; }
 
   .f-name    { grid-column: 1 / -1; }
   .f-notes   { grid-column: 1 / 3; }
   .f-btn-wrap { grid-column: 3 / 4; display: flex; align-items: flex-end; }
 
-  button.add-btn {
+  .add-btn {
     width: 100%;
-    background: #2563eb;
+    background: var(--blue);
     color: #fff;
     border: none;
-    border-radius: 8px;
-    padding: 9px 12px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    border-radius: 7px;
+    padding: 9px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.15s;
-    white-space: nowrap;
+    transition: opacity 0.15s;
   }
-  button.add-btn:hover { background: #1d4ed8; }
-  button.add-btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+  .add-btn:hover { opacity: 0.85; }
+  .add-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
   /* ── Stats ── */
-  .stats { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-  .stat {
-    background: #1a2637;
-    border: 1px solid #2a3f5a;
-    border-radius: 10px;
-    padding: 8px 14px;
-    font-size: 0.82rem;
-    color: #94a3b8;
+  .stats {
+    display: flex;
+    gap: 1px;
+    margin-bottom: 24px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
   }
-  .stat strong { color: #e0e8f0; font-size: 1rem; display: block; }
-
-  /* ── Item list ── */
-  .list { display: flex; flex-direction: column; gap: 8px; }
-
-  .item {
-    background: #1a2637;
-    border: 1px solid #2a3f5a;
-    border-radius: 10px;
-    padding: 12px 14px;
+  .stat {
+    flex: 1;
+    background: var(--surface);
+    padding: 12px 16px;
     display: flex;
     flex-direction: column;
+    gap: 2px;
+  }
+  .stat-val {
+    font-size: 1.3rem;
+    font-weight: 700;
+    font-family: var(--mono);
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-lbl {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .stat.warn .stat-val { color: var(--amber); }
+  .stat.danger .stat-val { color: var(--red); }
+
+  /* ── List ── */
+  .list { display: flex; flex-direction: column; gap: 6px; }
+
+  .item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .item-rail {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+  .item-accent {
+    width: 3px;
+    flex-shrink: 0;
+    background: var(--text-3);
+  }
+  .item.fresh .item-accent    { background: var(--green); }
+  .item.almost-spoiled .item-accent { background: var(--amber); }
+  .item.expired .item-accent  { background: var(--red); }
+
+  .item-body {
+    flex: 1;
+    padding: 13px 16px;
+    min-width: 0;
+  }
+  .item-row1 {
+    display: flex;
+    align-items: baseline;
     gap: 10px;
+    flex-wrap: wrap;
   }
-  .item.fresh        { border-left: 3px solid #22c55e; }
-  .item.almost-spoiled { border-left: 3px solid #f59e0b; background: #1e2013; }
-  .item.expired      { border-left: 3px solid #ef4444; background: #1e1313; }
-  .item.no-expiry    { border-left: 3px solid #475569; }
-
-  .item-top { display: flex; align-items: flex-start; gap: 10px; }
-  .item-content { flex: 1; min-width: 0; }
-  .item-name { font-size: 0.95rem; font-weight: 600; color: #e0e8f0; }
-  .item-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
-  .meta-tag {
-    font-size: 0.72rem;
-    color: #94a3b8;
-    background: #0f1923;
-    border-radius: 5px;
+  .item-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .item-status {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     padding: 2px 7px;
+    border-radius: 4px;
   }
+  .item.fresh .item-status         { color: var(--green); background: rgba(61,186,120,.12); }
+  .item.almost-spoiled .item-status { color: var(--amber); background: rgba(232,160,32,.12); }
+  .item.expired .item-status       { color: var(--red);   background: rgba(224,85,85,.12); }
+  .item.no-expiry .item-status     { color: var(--text-3); background: var(--surface-2); }
 
-  .item-notes {
-    margin-top: 6px;
-    font-size: 0.8rem;
-    color: #64748b;
-    cursor: text;
-    line-height: 1.4;
+  .item-meta {
+    display: flex;
+    gap: 16px;
+    margin-top: 5px;
+    flex-wrap: wrap;
   }
-  .item-notes:hover { color: #94a3b8; }
-  .notes-placeholder { font-style: italic; color: #2d4057; }
-  .notes-editor { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .meta {
+    font-size: 0.75rem;
+    color: var(--text-2);
+  }
+  .meta-key {
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    display: block;
+    margin-bottom: 1px;
+  }
+  .meta-val { font-family: var(--mono); color: var(--text-2); font-size: 0.78rem; }
+  .meta-val.expiring { color: var(--amber); }
+  .meta-val.expired  { color: var(--red); }
+
+  /* ── Notes ── */
+  .item-notes {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--text-2);
+    cursor: text;
+    line-height: 1.5;
+  }
+  .item-notes:hover { color: var(--text); }
+  .notes-empty { color: var(--text-3); font-style: italic; }
+  .notes-editor { display: flex; flex-direction: column; gap: 7px; }
   .notes-edit {
     width: 100%;
-    background: #0f1923;
-    border: 1px solid #3b5268;
+    background: var(--bg);
+    border: 1px solid var(--border-2);
     border-radius: 6px;
     padding: 7px 9px;
-    color: #e0e8f0;
-    font-size: 0.82rem;
+    color: var(--text);
+    font-size: 0.78rem;
     font-family: inherit;
     resize: none;
     outline: none;
+    transition: border-color 0.15s;
   }
-  .notes-edit:focus { border-color: #7dd3fc; }
+  .notes-edit:focus { border-color: var(--blue); }
   .save-note-btn {
     align-self: flex-start;
-    background: #1e40af;
-    color: #fff;
-    border: none;
+    background: var(--surface-2);
+    border: 1px solid var(--border-2);
+    color: var(--blue);
     border-radius: 6px;
-    padding: 6px 14px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    padding: 5px 13px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background 0.12s;
   }
-  .save-note-btn:hover { background: #2563eb; }
+  .save-note-btn:hover { background: var(--border); }
 
-  /* ── Item actions bar ── */
+  /* ── Actions bar ── */
   .item-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    padding: 10px 16px 12px;
+    border-top: 1px solid var(--border);
   }
-
   .portion-ctrl {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex-shrink: 0;
   }
   .portion-btn {
-    background: #1e293b;
-    border: 1px solid #2a3f5a;
+    width: 32px;
+    height: 32px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-2);
     border-radius: 6px;
-    color: #7dd3fc;
-    width: 34px;
-    height: 34px;
-    cursor: pointer;
+    color: var(--blue);
     font-size: 1.1rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.12s;
-    flex-shrink: 0;
+    cursor: pointer;
+    transition: background 0.1s;
     -webkit-tap-highlight-color: transparent;
   }
-  .portion-btn:hover { background: #2a3f5a; }
+  .portion-btn:hover { background: var(--border); }
   .portion-label {
-    font-size: 0.8rem;
-    color: #7dd3fc;
-    font-weight: 700;
-    white-space: nowrap;
-    min-width: 52px;
+    font-size: 0.78rem;
+    font-family: var(--mono);
+    color: var(--text-2);
+    min-width: 60px;
     text-align: center;
   }
-
-  .badge {
-    font-size: 0.72rem;
-    font-weight: 700;
-    border-radius: 6px;
-    padding: 3px 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
+  .del-btn {
     margin-left: auto;
-  }
-  .badge.fresh          { background: #14532d; color: #4ade80; }
-  .badge.almost-spoiled { background: #451a03; color: #fbbf24; }
-  .badge.expired        { background: #450a0a; color: #f87171; }
-  .badge.no-expiry      { background: #1e293b; color: #64748b; }
-
-  button.del-btn {
+    width: 32px;
+    height: 32px;
     background: transparent;
-    border: 1px solid #2a3f5a;
-    border-radius: 7px;
-    color: #64748b;
-    font-size: 1rem;
-    width: 34px;
-    height: 34px;
-    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-3);
+    font-size: 0.9rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: border-color 0.15s, color 0.15s;
-    flex-shrink: 0;
+    cursor: pointer;
+    transition: border-color 0.12s, color 0.12s;
     -webkit-tap-highlight-color: transparent;
   }
-  button.del-btn:hover { border-color: #ef4444; color: #ef4444; }
+  .del-btn:hover { border-color: var(--red); color: var(--red); }
 
-  .empty { text-align: center; color: #475569; padding: 48px 0; font-size: 1rem; }
+  .empty {
+    text-align: center;
+    padding: 56px 0;
+    color: var(--text-3);
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+  }
 
   /* ── Mobile ── */
   @media (max-width: 560px) {
-    body { padding: 14px 12px; }
-    .add-form {
-      grid-template-columns: 1fr 1fr;
-      padding: 12px;
-    }
-    .f-name    { grid-column: 1 / -1; }
-    .f-expires { grid-column: 2 / 3; }
-    .f-notes   { grid-column: 1 / -1; }
+    .page-header { padding: 16px; }
+    .content { padding: 14px; }
+    .add-form { grid-template-columns: 1fr 1fr; padding: 14px; }
+    .f-name  { grid-column: 1 / -1; }
+    .f-notes { grid-column: 1 / -1; }
     .f-btn-wrap { grid-column: 1 / -1; }
-    .f-btn-wrap button { width: 100%; }
+    .stats { flex-direction: row; flex-wrap: wrap; }
+    .stat { min-width: calc(50% - 1px); }
   }
 </style>
 </head>
 <body>
 
-<h1>🧊 Freezer Inventory</h1>
+<header class="page-header">
+  <div class="page-title">Freezer</div>
+  <div class="page-sub">inventory</div>
+</header>
 
-<div class="add-form">
-  <label class="f-name">
-    Item name
-    <input id="inp-name" type="text" placeholder="e.g. Chicken breasts" autocomplete="off">
-  </label>
-  <label>
-    Portions
-    <input id="inp-portions" type="number" min="1" value="1" placeholder="1">
-  </label>
-  <label class="f-expires">
-    Expires in (days)
-    <input id="inp-expires" type="number" min="1" placeholder="optional">
-  </label>
-  <label class="f-notes">
-    Notes
-    <textarea id="inp-notes" placeholder="optional — e.g. marinated, cooked, 30 May batch"></textarea>
-  </label>
-  <div class="f-btn-wrap">
-    <button class="add-btn" id="btn-add" onclick="addItem()">Add to freezer</button>
+<div class="content">
+
+  <div class="add-form">
+    <label class="f-name">
+      Name
+      <input id="inp-name" type="text" placeholder="e.g. Chicken breasts" autocomplete="off">
+    </label>
+    <label>
+      Portions
+      <input id="inp-portions" type="number" min="1" value="1">
+    </label>
+    <label class="f-expires">
+      Expires in (days)
+      <input id="inp-expires" type="number" min="1" placeholder="optional">
+    </label>
+    <label class="f-notes">
+      Notes
+      <textarea id="inp-notes" placeholder="optional — e.g. marinated, cooked, 30 May batch"></textarea>
+    </label>
+    <div class="f-btn-wrap">
+      <button class="add-btn" id="btn-add" onclick="addItem()">Add item</button>
+    </div>
   </div>
-</div>
 
-<div class="stats" id="stats"></div>
-<div class="list" id="list"></div>
+  <div class="stats" id="stats"></div>
+  <div class="list"  id="list"></div>
+
+</div>
 
 <script>
   const API = '/freezer/api/freezer';
 
   async function load() {
     const res = await fetch(API);
-    const items = await res.json();
-    render(items);
+    render(await res.json());
   }
 
-  function statusLabel(status) {
-    if (status === 'fresh') return 'Fresh';
-    if (status === 'almost-spoiled') return '⚠ Almost Spoiled';
-    if (status === 'expired') return '✗ Expired';
+  function statusLabel(s) {
+    if (s === 'fresh')         return 'Fresh';
+    if (s === 'almost-spoiled') return 'Expiring';
+    if (s === 'expired')       return 'Expired';
     return 'No expiry';
   }
 
   function render(items) {
-    const stats = document.getElementById('stats');
-    const list = document.getElementById('list');
+    const total        = items.length;
+    const totalPorts   = items.reduce((s, i) => s + (i.portions || 1), 0);
+    const almostCount  = items.filter(i => i.status === 'almost-spoiled').length;
+    const expiredCount = items.filter(i => i.status === 'expired').length;
 
-    const total = items.length;
-    const totalPortions = items.reduce((s, i) => s + (i.portions || 1), 0);
-    const almostSpoiled = items.filter(i => i.status === 'almost-spoiled').length;
-    const expired = items.filter(i => i.status === 'expired').length;
+    const statsEl = document.getElementById('stats');
+    statsEl.innerHTML = [
+      `<div class="stat"><div class="stat-val">${total}</div><div class="stat-lbl">Items</div></div>`,
+      `<div class="stat"><div class="stat-val">${totalPorts}</div><div class="stat-lbl">Portions</div></div>`,
+      almostCount  ? `<div class="stat warn"><div class="stat-val">${almostCount}</div><div class="stat-lbl">Expiring</div></div>` : '',
+      expiredCount ? `<div class="stat danger"><div class="stat-val">${expiredCount}</div><div class="stat-lbl">Expired</div></div>` : '',
+    ].join('');
 
-    stats.innerHTML = `
-      <div class="stat"><strong>${total}</strong>Items</div>
-      <div class="stat"><strong>${totalPortions}</strong>Portions</div>
-      ${almostSpoiled ? `<div class="stat" style="border-color:#f59e0b"><strong style="color:#fbbf24">${almostSpoiled}</strong>Almost Spoiled</div>` : ''}
-      ${expired ? `<div class="stat" style="border-color:#ef4444"><strong style="color:#f87171">${expired}</strong>Expired</div>` : ''}
-    `;
-
+    const listEl = document.getElementById('list');
     if (!items.length) {
-      list.innerHTML = '<div class="empty">Your freezer is empty. Add something above!</div>';
+      listEl.innerHTML = '<div class="empty">No items — add something above.</div>';
       return;
     }
 
-    list.innerHTML = items.map(item => {
+    listEl.innerHTML = items.map(item => {
       const portions = item.portions || 1;
-      const added = new Date(item.addedAt);
+      const added    = new Date(item.addedAt);
       const daysSince = Math.floor((Date.now() - added.getTime()) / 86400000);
-      const addedStr = added.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      const addedStr  = added.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
-      const expiryTag = item.expiresInDays
+      const expiryMeta = item.expiresInDays
         ? item.remaining <= 0
-          ? `<span class="meta-tag" style="color:#f87171">expired ${Math.abs(item.remaining)}d ago</span>`
-          : `<span class="meta-tag">${item.remaining}d remaining</span>`
+          ? `<div class="meta"><span class="meta-key">Expired</span><span class="meta-val expired">${Math.abs(item.remaining)}d ago</span></div>`
+          : `<div class="meta"><span class="meta-key">Remaining</span><span class="meta-val${item.status === 'almost-spoiled' ? ' expiring' : ''}">${item.remaining}d</span></div>`
         : '';
 
       const notesHtml = item.notes
         ? `<div class="item-notes" data-id="${item.id}" data-notes="${escAttr(item.notes)}" onclick="startEditNotes(this)">${escHtml(item.notes)}</div>`
-        : `<div class="item-notes" data-id="${item.id}" data-notes="" onclick="startEditNotes(this)"><span class="notes-placeholder">Add a note…</span></div>`;
+        : `<div class="item-notes" data-id="${item.id}" data-notes="" onclick="startEditNotes(this)"><span class="notes-empty">Add a note…</span></div>`;
 
       return `
         <div class="item ${item.status}">
-          <div class="item-top">
-            <div class="item-content">
-              <div class="item-name">${escHtml(item.name)}</div>
+          <div class="item-rail">
+            <div class="item-accent"></div>
+            <div class="item-body">
+              <div class="item-row1">
+                <span class="item-name">${escHtml(item.name)}</span>
+                <span class="item-status">${statusLabel(item.status)}</span>
+              </div>
               <div class="item-meta">
-                <span class="meta-tag">Added ${addedStr}</span>
-                <span class="meta-tag">${daysSince}d in freezer</span>
-                ${expiryTag}
+                <div class="meta"><span class="meta-key">Added</span><span class="meta-val">${addedStr}</span></div>
+                <div class="meta"><span class="meta-key">In freezer</span><span class="meta-val">${daysSince}d</span></div>
+                ${expiryMeta}
               </div>
               ${notesHtml}
             </div>
-            <button class="del-btn" onclick="deleteItem('${item.id}')" title="Remove">✕</button>
           </div>
           <div class="item-actions">
             <div class="portion-ctrl">
@@ -336,40 +454,34 @@
               <span class="portion-label">${portions} portion${portions !== 1 ? 's' : ''}</span>
               <button class="portion-btn" onclick="adjustPortions('${item.id}', ${portions}, 1)">+</button>
             </div>
-            <span class="badge ${item.status}">${statusLabel(item.status)}</span>
+            <button class="del-btn" onclick="deleteItem('${item.id}')" title="Remove">✕</button>
           </div>
-        </div>
-      `;
+        </div>`;
     }).join('');
   }
 
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-  function escAttr(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-  }
+  const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const escAttr = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
 
   async function addItem() {
-    const name = document.getElementById('inp-name').value.trim();
+    const name     = document.getElementById('inp-name').value.trim();
     const portions = parseInt(document.getElementById('inp-portions').value) || 1;
-    const expiresRaw = document.getElementById('inp-expires').value.trim();
-    const notes = document.getElementById('inp-notes').value.trim();
+    const expires  = document.getElementById('inp-expires').value.trim();
+    const notes    = document.getElementById('inp-notes').value.trim();
     if (!name) { document.getElementById('inp-name').focus(); return; }
 
     const btn = document.getElementById('btn-add');
     btn.disabled = true;
-
     const body = { name, portions };
-    if (expiresRaw) body.expiresInDays = parseInt(expiresRaw);
-    if (notes) body.notes = notes;
+    if (expires) body.expiresInDays = parseInt(expires);
+    if (notes)   body.notes = notes;
 
     await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
-    document.getElementById('inp-name').value = '';
-    document.getElementById('inp-portions').value = '1';
-    document.getElementById('inp-expires').value = '';
-    document.getElementById('inp-notes').value = '';
+    ['inp-name','inp-portions','inp-expires','inp-notes'].forEach(id => {
+      const el = document.getElementById(id);
+      el.value = id === 'inp-portions' ? '1' : '';
+    });
     btn.disabled = false;
     load();
   }
@@ -379,11 +491,7 @@
     if (newVal <= 0) {
       await fetch(`${API}/${id}`, { method: 'DELETE' });
     } else {
-      await fetch(`${API}/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ portions: newVal })
-      });
+      await fetch(`${API}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ portions: newVal }) });
     }
     load();
   }
@@ -391,41 +499,29 @@
   function startEditNotes(el) {
     if (el.querySelector('textarea')) return;
     const id = el.dataset.id;
-    const current = el.dataset.notes || '';
-
     const wrapper = document.createElement('div');
     wrapper.className = 'notes-editor';
-
     const ta = document.createElement('textarea');
     ta.className = 'notes-edit';
-    ta.value = current;
+    ta.value = el.dataset.notes || '';
     ta.rows = 2;
     ta.placeholder = 'Add a note…';
-
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save note';
-    saveBtn.className = 'save-note-btn';
-
-    wrapper.appendChild(ta);
-    wrapper.appendChild(saveBtn);
+    const btn = document.createElement('button');
+    btn.textContent = 'Save';
+    btn.className = 'save-note-btn';
+    wrapper.append(ta, btn);
     el.innerHTML = '';
     el.appendChild(wrapper);
     ta.focus();
 
     const save = async () => {
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving…';
-      const newNotes = ta.value.trim();
-      await fetch(`${API}/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: newNotes || null })
-      });
+      btn.disabled = true;
+      const notes = ta.value.trim();
+      await fetch(`${API}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: notes || null }) });
       load();
     };
-
-    saveBtn.addEventListener('mousedown', e => e.preventDefault());
-    saveBtn.addEventListener('click', save);
+    btn.addEventListener('mousedown', e => e.preventDefault());
+    btn.addEventListener('click', save);
     ta.addEventListener('keydown', e => {
       if (e.key === 'Escape') load();
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); }
@@ -438,7 +534,6 @@
   }
 
   document.getElementById('inp-name').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
-
   load();
 </script>
 </body>

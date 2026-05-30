@@ -411,6 +411,26 @@ function createServer() {
   );
 
   server.registerTool(
+    "list_websites",
+    {
+      description: "List all registered web servers with their public URLs, ports, and entry files.",
+      inputSchema: {},
+    },
+    async () => {
+      const servers = await readManifest();
+      if (!servers.length) return text("No web servers registered.");
+      const lines = servers.map((s) => {
+        const url = s.domain
+          ? `https://${s.domain}${s.path ?? ""}`
+          : `http://localhost:${s.port}${s.path ?? ""}`;
+        const note = s.start === false ? "  [not auto-started]" : "";
+        return `• ${s.name.padEnd(14)} ${url.padEnd(48)}  port ${s.port}${note}`;
+      });
+      return text(`${servers.length} registered server(s):\n\n${lines.join("\n")}`);
+    }
+  );
+
+  server.registerTool(
     "list_freezer_items",
     {
       description: "List all items currently in the freezer, with their status (fresh / almost-spoiled / expired), portions, date added, and days remaining.",
