@@ -6,43 +6,59 @@
 <title>Freezer Inventory</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: system-ui, sans-serif; background: #0f1923; color: #e0e8f0; min-height: 100vh; padding: 24px 16px; }
-  h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 24px; color: #7dd3fc; letter-spacing: -0.02em; }
+  body { font-family: system-ui, sans-serif; background: #0f1923; color: #e0e8f0; min-height: 100vh; padding: 20px 16px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; color: #7dd3fc; letter-spacing: -0.02em; }
 
+  /* ── Add form ── */
   .add-form {
     background: #1a2637;
     border: 1px solid #2a3f5a;
     border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 28px;
+    padding: 16px;
+    margin-bottom: 20px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
     gap: 10px;
-    align-items: end;
   }
-  .add-form .notes-row { grid-column: 1 / -1; }
-  .add-form label { display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .add-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
   .add-form input, .add-form textarea {
     background: #0f1923;
     border: 1px solid #2a3f5a;
     border-radius: 8px;
-    padding: 9px 12px;
+    padding: 8px 11px;
     color: #e0e8f0;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     outline: none;
     transition: border-color 0.15s;
     font-family: inherit;
+    width: 100%;
   }
-  .add-form textarea { resize: none; height: 52px; }
   .add-form input:focus, .add-form textarea:focus { border-color: #7dd3fc; }
   .add-form input::placeholder, .add-form textarea::placeholder { color: #475569; }
+  .add-form textarea { resize: none; height: 36px; }
+
+  .f-name    { grid-column: 1 / -1; }
+  .f-notes   { grid-column: 1 / 3; }
+  .f-btn-wrap { grid-column: 3 / 4; display: flex; align-items: flex-end; }
+
   button.add-btn {
+    width: 100%;
     background: #2563eb;
     color: #fff;
     border: none;
     border-radius: 8px;
-    padding: 9px 20px;
-    font-size: 0.95rem;
+    padding: 9px 12px;
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s;
@@ -51,39 +67,41 @@
   button.add-btn:hover { background: #1d4ed8; }
   button.add-btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
 
-  .stats { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  /* ── Stats ── */
+  .stats { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   .stat {
     background: #1a2637;
     border: 1px solid #2a3f5a;
     border-radius: 10px;
-    padding: 10px 16px;
-    font-size: 0.85rem;
+    padding: 8px 14px;
+    font-size: 0.82rem;
     color: #94a3b8;
   }
-  .stat strong { color: #e0e8f0; font-size: 1.1rem; display: block; }
+  .stat strong { color: #e0e8f0; font-size: 1rem; display: block; }
 
+  /* ── Item list ── */
   .list { display: flex; flex-direction: column; gap: 8px; }
 
   .item {
     background: #1a2637;
     border: 1px solid #2a3f5a;
     border-radius: 10px;
-    padding: 14px 16px;
-    display: grid;
-    grid-template-columns: 1fr auto auto auto;
-    gap: 12px;
-    align-items: center;
-    transition: border-color 0.15s;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
-  .item.fresh { border-left: 3px solid #22c55e; }
+  .item.fresh        { border-left: 3px solid #22c55e; }
   .item.almost-spoiled { border-left: 3px solid #f59e0b; background: #1e2013; }
-  .item.expired { border-left: 3px solid #ef4444; background: #1e1313; }
-  .item.no-expiry { border-left: 3px solid #475569; }
+  .item.expired      { border-left: 3px solid #ef4444; background: #1e1313; }
+  .item.no-expiry    { border-left: 3px solid #475569; }
 
-  .item-name { font-size: 1rem; font-weight: 600; color: #e0e8f0; }
-  .item-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .item-top { display: flex; align-items: flex-start; gap: 10px; }
+  .item-content { flex: 1; min-width: 0; }
+  .item-name { font-size: 0.95rem; font-weight: 600; color: #e0e8f0; }
+  .item-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
   .meta-tag {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: #94a3b8;
     background: #0f1923;
     border-radius: 5px;
@@ -91,73 +109,95 @@
   }
 
   .item-notes {
-    margin-top: 7px;
+    margin-top: 6px;
     font-size: 0.8rem;
     color: #64748b;
     cursor: text;
     line-height: 1.4;
   }
   .item-notes:hover { color: #94a3b8; }
-  .notes-placeholder { font-style: italic; color: #334155; }
+  .notes-placeholder { font-style: italic; color: #2d4057; }
+  .notes-editor { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
   .notes-edit {
     width: 100%;
     background: #0f1923;
     border: 1px solid #3b5268;
     border-radius: 6px;
-    padding: 6px 8px;
+    padding: 7px 9px;
     color: #e0e8f0;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-family: inherit;
     resize: none;
     outline: none;
-    margin-top: 2px;
   }
   .notes-edit:focus { border-color: #7dd3fc; }
+  .save-note-btn {
+    align-self: flex-start;
+    background: #1e40af;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .save-note-btn:hover { background: #2563eb; }
+
+  /* ── Item actions bar ── */
+  .item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
   .portion-ctrl {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     flex-shrink: 0;
   }
   .portion-btn {
     background: #1e293b;
     border: 1px solid #2a3f5a;
-    border-radius: 5px;
+    border-radius: 6px;
     color: #7dd3fc;
-    width: 26px;
-    height: 26px;
+    width: 34px;
+    height: 34px;
     cursor: pointer;
-    font-size: 1rem;
-    line-height: 1;
+    font-size: 1.1rem;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: background 0.12s;
     flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
   }
   .portion-btn:hover { background: #2a3f5a; }
-  .portion-count {
-    min-width: 20px;
-    text-align: center;
-    font-size: 0.9rem;
-    font-weight: 700;
+  .portion-label {
+    font-size: 0.8rem;
     color: #7dd3fc;
+    font-weight: 700;
+    white-space: nowrap;
+    min-width: 52px;
+    text-align: center;
   }
 
   .badge {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
     border-radius: 6px;
-    padding: 3px 9px;
+    padding: 3px 8px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     white-space: nowrap;
+    margin-left: auto;
   }
-  .badge.fresh { background: #14532d; color: #4ade80; }
+  .badge.fresh          { background: #14532d; color: #4ade80; }
   .badge.almost-spoiled { background: #451a03; color: #fbbf24; }
-  .badge.expired { background: #450a0a; color: #f87171; }
-  .badge.no-expiry { background: #1e293b; color: #64748b; }
+  .badge.expired        { background: #450a0a; color: #f87171; }
+  .badge.no-expiry      { background: #1e293b; color: #64748b; }
 
   button.del-btn {
     background: transparent;
@@ -165,26 +205,32 @@
     border-radius: 7px;
     color: #64748b;
     font-size: 1rem;
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: border-color 0.15s, color 0.15s;
     flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
   }
   button.del-btn:hover { border-color: #ef4444; color: #ef4444; }
 
   .empty { text-align: center; color: #475569; padding: 48px 0; font-size: 1rem; }
 
-  @media (max-width: 600px) {
-    .add-form { grid-template-columns: 1fr 1fr; }
-    .add-form .notes-row { grid-column: 1 / -1; }
-    .add-form label:last-of-type { grid-column: 1 / -1; }
-    .add-form button { grid-column: 1 / -1; }
-    .item { grid-template-columns: 1fr auto auto; }
-    .badge { display: none; }
+  /* ── Mobile ── */
+  @media (max-width: 560px) {
+    body { padding: 14px 12px; }
+    .add-form {
+      grid-template-columns: 1fr 1fr;
+      padding: 12px;
+    }
+    .f-name    { grid-column: 1 / -1; }
+    .f-expires { grid-column: 2 / 3; }
+    .f-notes   { grid-column: 1 / -1; }
+    .f-btn-wrap { grid-column: 1 / -1; }
+    .f-btn-wrap button { width: 100%; }
   }
 </style>
 </head>
@@ -193,7 +239,7 @@
 <h1>🧊 Freezer Inventory</h1>
 
 <div class="add-form">
-  <label>
+  <label class="f-name">
     Item name
     <input id="inp-name" type="text" placeholder="e.g. Chicken breasts" autocomplete="off">
   </label>
@@ -201,15 +247,17 @@
     Portions
     <input id="inp-portions" type="number" min="1" value="1" placeholder="1">
   </label>
-  <label>
+  <label class="f-expires">
     Expires in (days)
     <input id="inp-expires" type="number" min="1" placeholder="optional">
   </label>
-  <button class="add-btn" id="btn-add" onclick="addItem()">Add to freezer</button>
-  <label class="notes-row">
+  <label class="f-notes">
     Notes
-    <textarea id="inp-notes" placeholder="optional — e.g. 'marinated', 'cooked', 'from 30 May batch'"></textarea>
+    <textarea id="inp-notes" placeholder="optional — e.g. marinated, cooked, 30 May batch"></textarea>
   </label>
+  <div class="f-btn-wrap">
+    <button class="add-btn" id="btn-add" onclick="addItem()">Add to freezer</button>
+  </div>
 </div>
 
 <div class="stats" id="stats"></div>
@@ -266,26 +314,30 @@
 
       const notesHtml = item.notes
         ? `<div class="item-notes" data-id="${item.id}" data-notes="${escAttr(item.notes)}" onclick="startEditNotes(this)">${escHtml(item.notes)}</div>`
-        : `<div class="item-notes" data-id="${item.id}" data-notes="" onclick="startEditNotes(this)"><span class="notes-placeholder">Add a note...</span></div>`;
+        : `<div class="item-notes" data-id="${item.id}" data-notes="" onclick="startEditNotes(this)"><span class="notes-placeholder">Add a note…</span></div>`;
 
       return `
         <div class="item ${item.status}">
-          <div>
-            <div class="item-name">${escHtml(item.name)}</div>
-            <div class="item-meta">
-              <span class="meta-tag">Added ${addedStr}</span>
-              <span class="meta-tag">${daysSince}d in freezer</span>
-              ${expiryTag}
+          <div class="item-top">
+            <div class="item-content">
+              <div class="item-name">${escHtml(item.name)}</div>
+              <div class="item-meta">
+                <span class="meta-tag">Added ${addedStr}</span>
+                <span class="meta-tag">${daysSince}d in freezer</span>
+                ${expiryTag}
+              </div>
+              ${notesHtml}
             </div>
-            ${notesHtml}
+            <button class="del-btn" onclick="deleteItem('${item.id}')" title="Remove">✕</button>
           </div>
-          <div class="portion-ctrl">
-            <button class="portion-btn" onclick="adjustPortions('${item.id}', ${portions}, -1)">−</button>
-            <span class="portion-count">${portions}</span>
-            <button class="portion-btn" onclick="adjustPortions('${item.id}', ${portions}, 1)">+</button>
+          <div class="item-actions">
+            <div class="portion-ctrl">
+              <button class="portion-btn" onclick="adjustPortions('${item.id}', ${portions}, -1)">−</button>
+              <span class="portion-label">${portions} portion${portions !== 1 ? 's' : ''}</span>
+              <button class="portion-btn" onclick="adjustPortions('${item.id}', ${portions}, 1)">+</button>
+            </div>
+            <span class="badge ${item.status}">${statusLabel(item.status)}</span>
           </div>
-          <span class="badge ${item.status}">${statusLabel(item.status)}</span>
-          <button class="del-btn" onclick="deleteItem('${item.id}')" title="Remove">✕</button>
         </div>
       `;
     }).join('');
@@ -340,15 +392,29 @@
     if (el.querySelector('textarea')) return;
     const id = el.dataset.id;
     const current = el.dataset.notes || '';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'notes-editor';
+
     const ta = document.createElement('textarea');
     ta.className = 'notes-edit';
     ta.value = current;
     ta.rows = 2;
-    ta.placeholder = 'Add a note...';
+    ta.placeholder = 'Add a note…';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save note';
+    saveBtn.className = 'save-note-btn';
+
+    wrapper.appendChild(ta);
+    wrapper.appendChild(saveBtn);
     el.innerHTML = '';
-    el.appendChild(ta);
+    el.appendChild(wrapper);
     ta.focus();
-    ta.addEventListener('blur', async () => {
+
+    const save = async () => {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
       const newNotes = ta.value.trim();
       await fetch(`${API}/${id}`, {
         method: 'PUT',
@@ -356,10 +422,13 @@
         body: JSON.stringify({ notes: newNotes || null })
       });
       load();
-    });
+    };
+
+    saveBtn.addEventListener('mousedown', e => e.preventDefault());
+    saveBtn.addEventListener('click', save);
     ta.addEventListener('keydown', e => {
       if (e.key === 'Escape') load();
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.blur(); }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); }
     });
   }
 
