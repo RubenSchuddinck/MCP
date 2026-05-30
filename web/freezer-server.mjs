@@ -71,6 +71,7 @@ createServer(async (req, res) => {
         addedAt: new Date().toISOString(),
         portions: body.portions != null ? Number(body.portions) : 1,
         ...(body.expiresInDays != null ? { expiresInDays: Number(body.expiresInDays) } : {}),
+        ...(body.notes ? { notes: String(body.notes).trim() } : {}),
       };
       const db = await readDB();
       db.items.push(item);

@@ -323,12 +323,16 @@
   }
 
   async function adjustPortions(id, current, delta) {
-    const newVal = Math.max(0, current + delta);
-    await fetch(`${API}/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ portions: newVal })
-    });
+    const newVal = current + delta;
+    if (newVal <= 0) {
+      await fetch(`${API}/${id}`, { method: 'DELETE' });
+    } else {
+      await fetch(`${API}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ portions: newVal })
+      });
+    }
     load();
   }
 
