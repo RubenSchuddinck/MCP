@@ -162,6 +162,10 @@
           <button class="result-btn" id="btn-fail" onclick="setResult(false)">✗ Failed</button>
         </div>
       </div>
+      <div class="modal-field" id="result-date-field" style="display:none">
+        <label>Date</label>
+        <input type="date" id="result-date" />
+      </div>
       <div class="modal-field">
         <label>Guesses</label>
         <div class="guess-row">
@@ -341,6 +345,7 @@ function renderCard(game) {
             ${d.lastDailyDate ? `<div class="track-sub">Last: ${formatDate(d.lastDailyDate)}</div>` : ''}
           </div>
           <div class="track-actions">
+            <button class="btn btn-sm" data-action="daily-past" data-game="${game.id}" title="Log a missed day">＋ Past day</button>
             <button class="btn btn-sm btn-primary" data-action="daily" data-game="${game.id}" ${isToday ? 'disabled' : ''}>
               ${isToday ? '✓ Done' : '✓ Today'}
             </button>
@@ -383,13 +388,19 @@ function render() {
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
-async function markDaily(gameId, success, guesses) {
-  const today = todayStr();
-  data[gameId].lastDailyDate = today;
+async function markDailyDate(gameId, date, success, guesses) {
   data[gameId].log = data[gameId].log || [];
-  data[gameId].log.push({ date: today, type: 'daily', success, guesses });
+  data[gameId].log.push({ date, type: 'daily', success, guesses });
+  // keep lastDailyDate as the most recent date played
+  if (!data[gameId].lastDailyDate || date > data[gameId].lastDailyDate) {
+    data[gameId].lastDailyDate = date;
+  }
   await saveData(data);
   render();
+}
+
+async function markDaily(gameId, success, guesses) {
+  await markDailyDate(gameId, todayStr(), success, guesses);
 }
 
 async function setBacklog(gameId, newNum, success, guesses) {
@@ -418,13 +429,16 @@ function setResult(win) {
   document.getElementById('btn-fail').className = 'result-btn' + (!win ? ' selected-fail' : '');
 }
 
-function openResultModal(gameId, actionType, newNum = null) {
+function openResultModal(gameId, actionType, newNum = null, defaultDate = null) {
   const game = GAMES.find(g => g.id === gameId);
   pendingAction = { type: actionType, gameId, newNum };
-  const label = actionType === 'daily' ? 'Daily' : `Backlog #${newNum}`;
+  const isPast = actionType === 'daily-past';
+  const label = isPast ? 'Past daily' : actionType === 'daily' ? 'Daily' : `Backlog #${newNum}`;
   document.getElementById('result-title').textContent = `${game.icon} ${game.name} — ${label}`;
   document.getElementById('result-sub').textContent = '';
   document.getElementById('guess-input').value = 1;
+  document.getElementById('result-date-field').style.display = isPast ? '' : 'none';
+  if (isPast) document.getElementById('result-date').value = defaultDate || todayStr();
   setResult(true);
   document.getElementById('result-overlay').classList.add('open');
 }
@@ -441,6 +455,9 @@ async function confirmResult() {
   closeResultModal();
   if (type === 'daily') {
     await markDaily(gameId, resultSuccess, guesses);
+  } else if (type === 'daily-past') {
+    const date = document.getElementById('result-date').value || todayStr();
+    await markDailyDate(gameId, date, resultSuccess, guesses);
   } else {
     await setBacklog(gameId, newNum, resultSuccess, guesses);
   }
@@ -471,6 +488,15 @@ document.getElementById('games-grid').addEventListener('click', e => {
 
   if (action === 'daily') {
     openResultModal(gameId, 'daily');
+  } else if (action === 'daily-past') {
+    const last = data[gameId].lastDailyDate;
+    let defaultDate = todayStr();
+    if (last && last < todayStr()) {
+      const next = new Date(last + 'T00:00:00');
+      next.setDate(next.getDate() + 1);
+      defaultDate = next.toISOString().slice(0, 10);
+    }
+    openResultModal(gameId, 'daily-past', null, defaultDate);
   } else if (action === 'backlog-inc') {
     const newNum = (data[gameId].backlogNumber || 0) + 1;
     openResultModal(gameId, 'backlog', newNum);
