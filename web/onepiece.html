@@ -445,6 +445,43 @@
       if (currentView === 'stats') renderStatsPage();
     }
 
+    // Surgical update for a single arc change — patches just the affected row and
+    // its saga header in place (so progress bars animate and scroll/position is
+    // preserved) instead of rebuilding the whole list via render().
+    function patchArcDOM(id) {
+      const el = [...document.querySelectorAll('.arc')].find((a) => a.dataset.id === id);
+      const a = findArc(id);
+      if (!el || !a) return;
+      const w = a.watchedCount || 0, p = pct(w, a.epCount), done = w >= a.epCount;
+      el.classList.toggle('done', done);
+      const chk = el.querySelector('.arc-check');
+      chk.textContent = done ? '✓' : '';
+      chk.title = done ? 'Mark unwatched' : 'Mark arc watched';
+      el.querySelector('[data-act="dec"]').disabled = w <= 0;
+      el.querySelector('[data-act="inc"]').disabled = w >= a.epCount;
+      el.querySelector('.bar span').style.width = p + '%';
+      el.querySelector('.arc-count').textContent = w + ' / ' + a.epCount;
+    }
+    function patchSagaHead(saga) {
+      const sec = [...document.querySelectorAll('.saga')].find((s) => s.dataset.saga === saga);
+      if (!sec) return;
+      const arcs = arcsOf(saga), w = sumWatched(arcs), t = sumTotal(arcs), p = pct(w, t), full = w >= t && t > 0;
+      sec.querySelector('.saga-progress').classList.toggle('full', full);
+      sec.querySelector('.saga-progress .bar span').style.width = p + '%';
+      sec.querySelector('.saga-count').textContent = w + ' / ' + t + ' eps';
+      sec.querySelector('.saga-badge').textContent = full ? '🏆' : '🗺️';
+    }
+    // Apply one arc's change to the DOM without a full re-render.
+    function patchArc(id) {
+      const a = findArc(id);
+      if (!a) return;
+      patchArcDOM(id);
+      patchSagaHead(a.saga);
+      renderOverall();
+      renderStats();
+      if (currentView === 'stats') renderStatsPage();
+    }
+
     // ── STATS PAGE (inline SVG charts from the watch log) ───────────────────────────
     let currentView = 'tracker';
     function switchView(v) {
@@ -576,7 +613,7 @@
       const wasComplete = sumWatched(S.arcs) >= sumTotal(S.arcs);
       const arcWasDone = prev >= arc.epCount;
       arc.watchedCount = clamped; // optimistic
-      render();
+      patchArc(id);
       try {
         const saved = await apiPut(id, { watchedCount: clamped });
         Object.assign(arc, saved);
@@ -585,9 +622,9 @@
         const nowComplete = sumWatched(S.arcs) >= sumTotal(S.arcs);
         if (nowComplete && !wasComplete) { confetti({ count: 320, spread: true }); fanfare(); }
         else if (arc.watchedCount >= arc.epCount && !arcWasDone) { confetti({ count: 90 }); ding(); }
+        patchArc(id);
       }
-      catch { arc.watchedCount = prev; alert('Could not save — check the server.'); }
-      render();
+      catch { arc.watchedCount = prev; patchArc(id); alert('Could not save — check the server.'); }
     }
 
     // ── Events ──────────────────────────────────────────────────────────────────────
