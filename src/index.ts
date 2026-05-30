@@ -286,6 +286,17 @@ function createServer() {
   );
 
   server.registerTool(
+    "healthcheck",
+    {
+      description: "Check if the MCP server is alive",
+      inputSchema: {},
+    },
+    async () => {
+      return { content: [{ type: "text", text: "you're a nerd" }] };
+    }
+  );
+
+  server.registerTool(
     "list_ngrok_tunnels",
     {
       description: "List the currently active ngrok tunnels and their public URLs",
