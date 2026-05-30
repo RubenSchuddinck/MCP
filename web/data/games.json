@@ -2,5 +2,7 @@
   "faces":    { "lastDailyDate": null, "backlogNumber": 0, "log": [] },
   "episode":  { "lastDailyDate": null, "backlogNumber": 0, "log": [] },
   "gaps":     { "lastDailyDate": null, "backlogNumber": 0, "log": [] },
-  "acrostic": { "lastDailyDate": null, "backlogNumber": 0, "log": [] }
+  "acrostic": { "lastDailyDate": null, "backlogNumber": 0, "log": [] },
+  "wordle":   { "lastDailyDate": null, "backlogNumber": 0, "log": [] },
+  "horsle":   { "lastDailyDate": null, "backlogNumber": 0, "log": [] }
 }
