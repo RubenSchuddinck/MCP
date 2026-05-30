@@ -603,6 +603,55 @@ function createServer() {
   );
 
   server.registerTool(
+    "update_recipe",
+    {
+      description: "Update fields on an existing recipe (find by name or ID). Only the fields you provide are changed — everything else stays the same.",
+      inputSchema: {
+        query:       z.string().describe("Recipe name (partial match) or exact ID to update"),
+        name:        z.string().optional().describe("New name"),
+        description: z.string().optional().describe("New description"),
+        tags:        z.array(z.string()).optional().describe("Replace the full tags list"),
+        ingredients: z.array(z.string()).optional().describe("Replace the full ingredients list"),
+        steps:       z.array(z.string()).optional().describe("Replace the full steps list"),
+        prepTime:    z.number().optional().describe("New prep time in minutes"),
+        cookTime:    z.number().optional().describe("New cook time in minutes"),
+        servings:    z.number().optional().describe("New servings count"),
+        difficulty:  z.enum(["Easy", "Medium", "Hard"]).optional().describe("New difficulty level"),
+        score:       z.number().min(0).max(5).optional().describe("New personal score 0–5"),
+        imageUrl:    z.string().url().optional().describe("New image URL"),
+      },
+    },
+    async ({ query, name, description, tags, ingredients, steps, prepTime, cookTime, servings, difficulty, score, imageUrl }) => {
+      const recipes = await readRecipesDB();
+      const q = query.trim().toLowerCase();
+      const idx =
+        recipes.findIndex((r) => r.id === query.trim()) !== -1
+          ? recipes.findIndex((r) => r.id === query.trim())
+          : recipes.findIndex((r) => r.name.toLowerCase() === q) !== -1
+          ? recipes.findIndex((r) => r.name.toLowerCase() === q)
+          : recipes.findIndex((r) => r.name.toLowerCase().includes(q));
+      if (idx === -1) return text(`No recipe found matching "${query}". Use list_recipes to see all.`);
+      const r = recipes[idx];
+      if (name != null)        r.name = name.trim();
+      if (description != null) r.description = description.trim();
+      if (tags != null)        r.tags = tags;
+      if (ingredients != null) r.ingredients = ingredients;
+      if (steps != null)       r.steps = steps;
+      if (prepTime != null)    r.prepTime = prepTime;
+      if (cookTime != null)    r.cookTime = cookTime;
+      if (servings != null)    r.servings = servings;
+      if (difficulty != null)  r.difficulty = difficulty;
+      if (score != null)       r.score = score;
+      if (imageUrl != null)    r.imageUrl = imageUrl;
+      if (prepTime != null || cookTime != null) {
+        r.totalTime = (r.prepTime ?? 0) + (r.cookTime ?? 0) || undefined;
+      }
+      await writeRecipesDB(recipes);
+      return text(`Updated:\n\n${formatRecipeFull(r)}`);
+    }
+  );
+
+  server.registerTool(
     "add_recipe",
     {
       description: "Add a new recipe to the recipe collection.",
